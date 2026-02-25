@@ -84,8 +84,8 @@
     }
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/images/logo_horizontal1.svg",
+    "dark": "/images/logo_horizontal_fordarkbg.svg"
   },
   "navbar": {
     "links": [
@@ -118,5 +118,15 @@
       "github": "https://github.com/mintlify",
       "linkedin": "https://linkedin.com/company/mintlify"
     }
+  },
+  "appearance": {
+    "strict": false,
+    "default": "light"
+  },
+  "fonts": {
+    "family": "kanit",
+    "weight": 300,
+    "source": "https://fonts.google.com/share?selection.family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900",
+    "format": "woff"
   }
 }
