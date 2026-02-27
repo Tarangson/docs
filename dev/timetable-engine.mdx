@@ -1,0 +1,367 @@
+---
+title: "ระบบจัดตารางสอน"
+description: "หลักการทำงานของ timetable editor, conflict detection, wizard system, drag-and-drop และ pin mechanism"
+---
+
+## ภาพรวม
+
+หน้าจัดตารางสอน (`app/timetable/page.tsx`) เป็นหัวใจหลักของ Tarangson ทำหน้าที่:
+
+1. **แสดงตาราง** -- แสดง grid วัน x คาบ สำหรับ entity (teacher/student/room) ที่เลือก
+2. **Drag & Drop** -- ลากวิชาจาก sidebar ไปวางในช่องว่าง หรือย้ายระหว่างช่อง
+3. **Conflict Detection** -- ตรวจสอบการจัดคาบซ้อนแบบ real-time
+4. **Wizard Mode** -- จัดตารางพิเศษสำหรับกิจกรรมที่มีหลาย entity ร่วม
+5. **Pin/Lock** -- ล็อคคาบไม่ให้ถูกย้ายหรือลบ
+
+---
+
+## View Modes
+
+ระบบรองรับ 3 มุมมอง โดยแต่ละมุมมองจะโหลด timeslots ของ entity type นั้นๆ:
+
+```typescript
+type ViewMode = "teacher" | "student" | "room";
+```
+
+| View Mode | Primary Entity | ข้อมูลที่เก็บในแต่ละ cell |
+|---|---|---|
+| `teacher` | ผู้สอน | subjectId, studentId, roomId |
+| `student` | ผู้เรียน | subjectId, teacherId, roomId |
+| `room` | ห้องเรียน | subjectId, teacherId, studentId |
+
+### View Mode Configuration
+
+```typescript
+const VIEW_MODE_CONFIG: Record<ViewMode, {
+  primaryLabel: string;
+  secondaryEntities: { type: EntityType; label: string }[];
+}> = {
+  teacher: {
+    primaryLabel: "ผู้สอน",
+    secondaryEntities: [
+      { type: "subject", label: "วิชาเรียน" },
+      { type: "student", label: "ผู้เรียน" },
+      { type: "room",    label: "ห้องเรียน" },
+    ],
+  },
+  // ... student, room
+};
+```
+
+---
+
+## Axis Modes
+
+ตารางรองรับ 2 แกน:
+
+```typescript
+type AxisMode = "days-rows" | "periods-rows";
+```
+
+- **`days-rows`** -- แถว = วัน, คอลัมน์ = คาบ (default)
+- **`periods-rows`** -- แถว = คาบ, คอลัมน์ = วัน
+
+---
+
+## Drag and Drop (dnd-kit)
+
+ใช้ `@dnd-kit/core` สำหรับ drag-and-drop:
+
+### Libraries ที่ใช้
+
+```json
+{
+  "@dnd-kit/core": "^6.3.1",
+  "@dnd-kit/modifiers": "^9.0.0",
+  "@dnd-kit/sortable": "^10.0.0",
+  "@dnd-kit/utilities": "^3.2.2"
+}
+```
+
+### การทำงาน
+
+1. **Draggable items** -- card บน sidebar ที่แสดงวิชา, ผู้สอน, ผู้เรียน, ห้อง
+2. **Droppable zones** -- ช่องตารางแต่ละ cell (วัน x คาบ)
+3. **เมื่อ drop สำเร็จ**:
+   - สร้าง `ScheduleEntry` จากข้อมูลที่ drag มา
+   - เรียก `saveScheduleTimeslot()` (atomic transaction)
+   - ถ้า conflict -- แสดง toast error
+   - ถ้าสำเร็จ -- update local state
+
+### Drag จาก cell ไป cell อื่น (Move)
+
+เมื่อ drag card จากช่องหนึ่งไปอีกช่อง:
+
+1. ตรวจสอบว่า card ไม่ได้ถูก pin (ถ้า pin จะไม่ให้ drag)
+2. เรียก `moveScheduleTimeslot()` -- ลบต้นทาง + สร้างปลายทาง ใน 1 transaction
+3. Transaction จะตรวจว่าปลายทางว่างหรือไม่
+
+---
+
+## Conflict Detection
+
+ระบบตรวจ conflict ใน 3 ระดับ:
+
+### 1. Transaction-level (Firestore)
+
+ทุกการ save/move ใช้ `runTransaction` ที่ตรวจสอบ:
+
+```typescript
+await runTransaction(db, async (transaction) => {
+  // อ่านทั้ง 3 docs
+  const [teacherSnap, studentSnap, roomSnap] = await Promise.all([
+    transaction.get(teacherRef),
+    transaction.get(studentRef),
+    transaction.get(roomRef),
+  ]);
+
+  // ตรวจ conflict
+  if (teacherSnap.exists()) throw new Error("CONFLICT_TEACHER");
+  if (studentSnap.exists()) throw new Error("CONFLICT_STUDENT");
+  if (roomSnap.exists()) throw new Error("CONFLICT_ROOM");
+
+  // เขียนทั้ง 3 collections
+  transaction.set(teacherRef, { ... });
+  transaction.set(studentRef, { ... });
+  transaction.set(roomRef, { ... });
+});
+```
+
+### 2. Batch conflict check (Wizard)
+
+สำหรับ wizard mode ที่จัดคาบให้หลาย entity:
+
+```typescript
+const conflicted = await checkTimeslotConflictsBatch(
+  schoolId, fileId,
+  "teachers",           // target collection
+  selectedTeacherIds,   // entity IDs ที่จะตรวจ
+  "MON_1"              // slot key
+);
+```
+
+### 3. Client-side validation
+
+UI จะแสดง visual feedback:
+- ช่องที่มีข้อมูลแล้ว -- แสดง card พร้อมข้อมูลวิชา/ผู้สอน
+- ช่องว่าง -- แสดง droppable zone
+
+---
+
+## Wizard Template System
+
+Wizard ช่วยจัดตารางสำหรับกิจกรรมพิเศษที่มีหลาย entity ร่วมกัน (เช่น ประชุม, ลูกเสือ)
+
+### Built-in Templates
+
+```typescript
+const WIZARD_DEFAULT_TEMPLATES: WizardTemplate[] = [
+  {
+    id: "student-assembly",
+    label: "ประชุมผู้เรียน ทั้งโรงเรียน / รายระดับชั้น",
+    config: { teacherMode: "multi", studentMode: "multi", roomMode: "single" },
+  },
+  {
+    id: "teacher-assembly",
+    label: "ประชุมผู้สอน",
+    config: { teacherMode: "multi", studentMode: "multi", roomMode: "single" },
+  },
+  {
+    id: "scouts",
+    label: "ลูกเสือ เนตรนารี",
+    config: { teacherMode: "multi", studentMode: "multi", roomMode: "single" },
+  },
+  {
+    id: "multi-teacher-subject",
+    label: "วิชาหลายผู้สอน",
+    config: { teacherMode: "multi", studentMode: "single", roomMode: "single" },
+  },
+  {
+    id: "multi-student-subject",
+    label: "วิชาหลายผู้เรียน",
+    config: { teacherMode: "single", studentMode: "multi", roomMode: "single" },
+  },
+];
+```
+
+นอกจากนี้ยังมี **"กำหนดเอง" (custom)** template ที่ให้กำหนด mode ได้อิสระ
+
+### WizardConfigMode
+
+```typescript
+type WizardConfigMode = "none" | "single" | "multi";
+```
+
+| Mode | ความหมาย |
+|---|---|
+| `none` | ไม่เลือก entity นี้ |
+| `single` | เลือก 1 ตัว |
+| `multi` | เลือกหลายตัว |
+
+### Wizard Save Flow
+
+<Steps>
+  <Step title="เลือก template">
+    User เลือก template ที่เหมาะกับกิจกรรม
+  </Step>
+
+  <Step title="เลือก entities">
+    เลือก teacher/student/room ตาม mode ที่กำหนด (single/multi)
+  </Step>
+
+  <Step title="เลือกวิชาและคาบ">
+    เลือก subject, วัน, และคาบที่จะจัด
+  </Step>
+
+  <Step title="ตรวจ conflict">
+    เรียก `checkTimeslotConflictsBatch()` ตรวจทุก entity ที่เลือก
+  </Step>
+
+  <Step title="บันทึกแบบ atomic">
+    เรียก `saveWizardTimeslotAtomic()` เขียนให้ทุก entity ใน 1 transaction
+  </Step>
+</Steps>
+
+---
+
+## Pin / Lock Mechanism
+
+User สามารถ "pin" (ล็อค) คาบที่จัดแล้วไม่ให้ถูกย้ายหรือลบ:
+
+### การทำงาน
+
+```typescript
+// Toggle pin across all 3 collections atomically
+await toggleTimeslotPin(schoolId, fileId, entry, true);  // pin
+await toggleTimeslotPin(schoolId, fileId, entry, false); // unpin
+```
+
+### ข้อจำกัดของ pinned card
+
+- ไม่สามารถ drag ย้ายได้ (UI จะไม่อนุญาต)
+- ไม่สามารถลบได้ (ต้อง unpin ก่อน)
+- แสดง icon pin บน card
+
+---
+
+## Atomic Transactions
+
+<Callout type="warning">
+  ทุกการเขียน schedule ใช้ `runTransaction` หรือ `writeBatch` ของ Firestore เพื่อป้องกัน:
+  - **Data inconsistency** -- เขียนไม่ครบ 3 collections
+  - **Race condition** -- 2 users จัดคาบเดียวกันพร้อมกัน
+  - **Conflict** -- ผู้สอน/ผู้เรียน/ห้อง ซ้ำกัน
+</Callout>
+
+### Standard Mode: `runTransaction`
+
+ใช้ transaction ที่ **read-before-write**:
+1. อ่าน docs ทั้ง 3 (teacher, student, room)
+2. ตรวจว่ามี data อยู่แล้วหรือไม่
+3. ถ้าว่าง -- เขียนทั้ง 3 ใน transaction เดียวกัน
+4. ถ้าไม่ว่าง -- throw conflict error
+
+### Wizard Mode: `runTransaction` (multi-entity)
+
+```typescript
+await runTransaction(db, async (transaction) => {
+  // 1. Read ALL target docs
+  const snaps = await Promise.all(allRefs.map(ref => transaction.get(ref)));
+
+  // 2. Check for conflicts
+  const conflicts = [];
+  for (let i = 0; i < snaps.length; i++) {
+    if (snaps[i].exists()) {
+      conflicts.push({ type: ..., entityId: ... });
+    }
+  }
+
+  if (conflicts.length > 0) throw ...;
+
+  // 3. Write ALL atomically
+  for (const ref of allRefs) {
+    transaction.set(ref, data);
+  }
+});
+```
+
+### Bulk Delete: `writeBatch` with chunking
+
+```typescript
+// Firestore batch limit = 500
+const CHUNK = 500;
+for (let i = 0; i < allRefs.length; i += CHUNK) {
+  const chunk = allRefs.slice(i, i + CHUNK);
+  const batch = writeBatch(db);
+  for (const ref of chunk) batch.delete(ref);
+  await batch.commit();
+}
+```
+
+---
+
+## Sidebar Menu Structure
+
+```typescript
+const SIDEBAR_MENU = [
+  { id: "schedule", label: "จัดตารางสอน" },
+  {
+    id: "advanced", label: "จัดตารางสอนแบบซับซ้อน",
+    items: [
+      { id: "wizard-add",       label: "ผู้ช่วยเพิ่มตารางพิเศษ" },
+      { id: "wizard-delete",    label: "ผู้ช่วยลบ" },
+      { id: "teacher-periods",  label: "จัดทีละผู้สอน" },
+      { id: "student-periods",  label: "จัดทีละผู้เรียน" },
+      { id: "room-periods",     label: "จัดทีละห้องเรียน" },
+    ],
+  },
+];
+```
+
+---
+
+## Zoom Levels
+
+ตารางรองรับ 3 ระดับ zoom:
+
+```typescript
+const ZOOM_LEVELS = [
+  { cellW: 112, cellH: 84,  cardW: 108, cardH: 80, font: 10 },  // Small
+  { cellW: 128, cellH: 96,  cardW: 120, cardH: 89, font: 13 },  // Medium
+  { cellW: 140, cellH: 105, cardW: 132, cardH: 98, font: 15 },  // Large
+];
+```
+
+---
+
+## Card Field Settings
+
+User สามารถเลือก field ที่จะแสดงบน card ของแต่ละ entity type:
+
+```typescript
+const BUILTIN_CARD_FIELDS: Record<string, { key: string; label: string }[]> = {
+  teacher: [
+    { key: "code", label: "รหัส" },
+    { key: "prefix", label: "คำนำหน้า" },
+    { key: "firstName", label: "ชื่อ" },
+    { key: "lastName", label: "นามสกุล" },
+    { key: "department", label: "หมวด/ฝ่าย" },
+  ],
+  subject: [
+    { key: "code", label: "รหัสวิชา" },
+    { key: "name", label: "ชื่อวิชา" },
+  ],
+  student: [
+    { key: "code", label: "รหัส" },
+    { key: "className", label: "ชั้นเรียน" },
+    { key: "gradeGroup", label: "ระดับชั้น" },
+  ],
+  room: [
+    { key: "code", label: "รหัสห้อง" },
+    { key: "name", label: "ชื่อห้อง" },
+    { key: "description", label: "รายละเอียด" },
+  ],
+};
+```
+
+Card field settings ถูกเก็บใน Firestore ที่ `schedules/setting` document

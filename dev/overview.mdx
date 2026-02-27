@@ -1,0 +1,131 @@
+---
+title: "ภาพรวมสถาปัตยกรรม"
+description: "สถาปัตยกรรมและโครงสร้างโปรเจกต์ Tarangson Web Application"
+---
+
+## Tech Stack
+
+Tarangson webapp สร้างด้วย stack ที่ทันสมัยดังนี้:
+
+| Technology | Version | Purpose |
+|---|---|---|
+| **Next.js** | 16.1.6 | App Router framework |
+| **React** | 19.2.3 | UI library |
+| **TypeScript** | ^5 | Type-safe JavaScript |
+| **Tailwind CSS** | ^4 | Utility-first CSS framework |
+| **shadcn/ui** | ^3.8.4 (CLI) | Component library built on Radix UI |
+| **Radix UI** | ^1.4.3 | Accessible UI primitives |
+| **Firebase** | ^12.9.0 | Auth, Firestore, Storage |
+| **dnd-kit** | ^6.3.1 (core) | Drag-and-drop สำหรับจัดตารางสอน |
+| **XLSX (SheetJS)** | ^0.18.5 | Import/Export Excel |
+| **Sonner** | ^2.0.7 | Toast notifications |
+| **Lucide React** | ^0.564.0 | Icon library |
+
+### Libraries เสริม
+
+- **class-variance-authority** -- จัดการ variant ของ component styles
+- **clsx** + **tailwind-merge** -- จัดการ conditional class names
+- **next-themes** -- Dark/Light mode
+- **thai-address-autocomplete-react** -- autocomplete ที่อยู่ภาษาไทย
+
+## โครงสร้างโปรเจกต์
+
+```
+tarangson-webapp/
+├── app/
+│   ├── layout.tsx              # Root layout (AuthProvider, Toaster, Kanit font)
+│   ├── page.tsx                # Landing page (redirect)
+│   ├── globals.css             # Global styles (Tailwind)
+│   ├── favicon.ico
+│   │
+│   ├── context/
+│   │   └── AuthContext.tsx      # Firebase Auth context provider
+│   │
+│   ├── components/
+│   │   └── ProtectedRoute.tsx   # Route guard (auth + setup check)
+│   │
+│   ├── lib/
+│   │   ├── firebase.ts          # Firebase app initialization
+│   │   ├── firestore.ts         # Firestore CRUD utility functions
+│   │   ├── types.ts             # TypeScript interfaces & constants
+│   │   └── excel.ts             # Excel import/export utilities
+│   │
+│   ├── login/                   # Login page
+│   ├── setup/                   # Setup wizard (4 steps)
+│   ├── dashboard/               # Main dashboard
+│   ├── settings/                # School settings
+│   ├── academic/                # Academic calendar config
+│   │
+│   ├── teachers/                # Teacher management (CRUD)
+│   ├── students/                # Student management (CRUD)
+│   ├── rooms/                   # Room management (CRUD)
+│   ├── subjects/                # Subject management (CRUD)
+│   │
+│   └── timetable/
+│       ├── page.tsx             # Timetable editor (main scheduling page)
+│       ├── new/                 # Create new timetable file
+│       ├── files/
+│       │   └── [fileId]/
+│       │       └── manage/      # Manage specific timetable file
+│       └── view/
+│           └── [mode]/          # View timetable (teacher/student/room)
+│
+├── components/
+│   └── ui/                      # shadcn/ui components (Button, Dialog, etc.)
+│
+├── lib/
+│   └── utils.ts                 # cn() utility function
+│
+├── public/                      # Static assets
+├── package.json
+├── tsconfig.json
+├── next.config.ts
+└── tailwind.config.ts
+```
+
+## หลักการสำคัญทางสถาปัตยกรรม
+
+### App Router (Next.js 16)
+
+ใช้ Next.js App Router ทั้งหมด -- ทุก page อยู่ภายใต้ `app/` directory โดยใช้ `"use client"` directive เนื่องจากเป็น client-side application ที่ต้องการ Firebase Auth state
+
+### Authentication Flow
+
+```
+layout.tsx (AuthProvider)
+  └── ProtectedRoute
+       ├── ไม่ login → redirect /login
+       ├── ยังไม่ setup → redirect /setup
+       └── พร้อมใช้งาน → render children
+```
+
+### Data Architecture
+
+ข้อมูลทั้งหมดเก็บใน **Firestore** โดยใช้ document-based schema:
+
+- **School-scoped data** -- ใช้ `{schoolId}` เป็น root document
+- **Roster data** -- เก็บเป็น sub-collection ภายใต้ `academicDefaults`
+- **Timetable data** -- denormalized เป็น 3 collections (teachers/students/rooms) เพื่อให้ query ได้เร็ว
+
+### Denormalized Schedule Storage
+
+<Callout type="info">
+  ข้อมูลตารางสอนถูกเก็บแบบ **denormalized** -- เขียนซ้ำ 3 ที่ (teacher, student, room collection) เพื่อให้ load ตาราง
+  แต่ละมุมมองได้เร็วโดยไม่ต้อง query ข้าม collection ทุกการ write ใช้ `runTransaction` เพื่อป้องกัน conflict
+</Callout>
+
+### Font & Localization
+
+- ใช้ **Kanit** font สำหรับภาษาไทย (Google Fonts)
+- ภาษาหลักคือภาษาไทย (`lang="th"`)
+- Timezone default: `Asia/Bangkok`
+
+## Dev Dependencies
+
+| Package | Purpose |
+|---|---|
+| `@tailwindcss/postcss` | Tailwind CSS v4 PostCSS plugin |
+| `eslint` + `eslint-config-next` | Linting |
+| `tw-animate-css` | CSS animation utilities for Tailwind |
+| `typescript` | TypeScript compiler |
+| `shadcn` | CLI tool for installing shadcn/ui components |

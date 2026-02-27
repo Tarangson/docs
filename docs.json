@@ -1,68 +1,92 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Taranson Docs",
+  "name": "Tarangson Docs",
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",
     "dark": "#15803D"
   },
   "favicon": "/favicon.svg",
+  "languages": [
+    { "language": "th", "default": true },
+    { "language": "en", "prefix": "en" }
+  ],
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "คู่มือผู้ใช้",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "เริ่มต้นใช้งาน",
             "pages": [
               "index",
-              "quickstart",
-              "development"
+              "getting-started/register",
+              "getting-started/setup-wizard",
+              "getting-started/dashboard"
             ]
           },
           {
-            "group": "Customization",
+            "group": "ตั้งค่าพื้นฐาน",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "settings/academic-defaults",
+              "settings/school-profile",
+              "settings/account"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "จัดการข้อมูล",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "roster/teachers",
+              "roster/students",
+              "roster/rooms",
+              "roster/subjects",
+              "roster/excel"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "สร้างตารางสอน",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "timetable/create-file",
+              "timetable/wizard",
+              "timetable/editing",
+              "timetable/viewing",
+              "timetable/printing",
+              "timetable/files"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Developer Guide",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Architecture",
             "pages": [
-              "api-reference/introduction"
+              "dev/overview",
+              "dev/setup"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Data Model",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "dev/firestore-schema",
+              "dev/types"
+            ]
+          },
+          {
+            "group": "Core Modules",
+            "pages": [
+              "dev/auth",
+              "dev/firestore-functions",
+              "dev/timetable-engine",
+              "dev/excel"
+            ]
+          },
+          {
+            "group": "Contributing",
+            "pages": [
+              "dev/contributing"
             ]
           }
         ]
@@ -71,14 +95,9 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "Tarangson",
+          "href": "https://tarangson.com",
+          "icon": "calendar-days"
         }
       ]
     }
@@ -91,26 +110,26 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "mailto:support@tarangson.com"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "label": "เข้าใช้งาน",
+      "href": "https://tarangson.com"
     }
   },
   "contextual": {
     "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
   },
   "appearance": {
     "strict": false,

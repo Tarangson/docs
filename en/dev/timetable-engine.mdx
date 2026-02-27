@@ -1,0 +1,367 @@
+---
+title: "Timetable Scheduling Engine"
+description: "How the timetable editor, conflict detection, wizard system, drag-and-drop, and pin mechanism work"
+---
+
+## Overview
+
+The timetable scheduling page (`app/timetable/page.tsx`) is the core of Tarangson. It handles:
+
+1. **Displaying the grid** -- renders a day x period grid for the selected entity (teacher/student/room)
+2. **Drag & Drop** -- drag subjects from the sidebar onto empty cells, or move between cells
+3. **Conflict Detection** -- real-time conflict checking when scheduling
+4. **Wizard Mode** -- special scheduling for activities involving multiple entities
+5. **Pin/Lock** -- lock periods to prevent them from being moved or deleted
+
+---
+
+## View Modes
+
+The system supports 3 view modes. Each view loads timeslots for its respective entity type:
+
+```typescript
+type ViewMode = "teacher" | "student" | "room";
+```
+
+| View Mode | Primary Entity | Data Stored in Each Cell |
+|---|---|---|
+| `teacher` | Teacher | subjectId, studentId, roomId |
+| `student` | Student | subjectId, teacherId, roomId |
+| `room` | Room | subjectId, teacherId, studentId |
+
+### View Mode Configuration
+
+```typescript
+const VIEW_MODE_CONFIG: Record<ViewMode, {
+  primaryLabel: string;
+  secondaryEntities: { type: EntityType; label: string }[];
+}> = {
+  teacher: {
+    primaryLabel: "ผู้สอน",
+    secondaryEntities: [
+      { type: "subject", label: "วิชาเรียน" },
+      { type: "student", label: "ผู้เรียน" },
+      { type: "room",    label: "ห้องเรียน" },
+    ],
+  },
+  // ... student, room
+};
+```
+
+---
+
+## Axis Modes
+
+The grid supports 2 axis orientations:
+
+```typescript
+type AxisMode = "days-rows" | "periods-rows";
+```
+
+- **`days-rows`** -- rows = days, columns = periods (default)
+- **`periods-rows`** -- rows = periods, columns = days
+
+---
+
+## Drag and Drop (dnd-kit)
+
+Uses `@dnd-kit/core` for drag-and-drop:
+
+### Libraries Used
+
+```json
+{
+  "@dnd-kit/core": "^6.3.1",
+  "@dnd-kit/modifiers": "^9.0.0",
+  "@dnd-kit/sortable": "^10.0.0",
+  "@dnd-kit/utilities": "^3.2.2"
+}
+```
+
+### How It Works
+
+1. **Draggable items** -- sidebar cards showing subjects, teachers, students, rooms
+2. **Droppable zones** -- each cell in the grid (day x period)
+3. **On successful drop**:
+   - Creates a `ScheduleEntry` from the dragged data
+   - Calls `saveScheduleTimeslot()` (atomic transaction)
+   - On conflict -- shows a toast error
+   - On success -- updates local state
+
+### Dragging from Cell to Cell (Move)
+
+When dragging a card from one cell to another:
+
+1. Checks that the card is not pinned (pinned cards cannot be dragged)
+2. Calls `moveScheduleTimeslot()` -- deletes from source + creates at destination in 1 transaction
+3. The transaction verifies the destination is empty
+
+---
+
+## Conflict Detection
+
+The system checks for conflicts at 3 levels:
+
+### 1. Transaction-level (Firestore)
+
+Every save/move uses `runTransaction` which checks:
+
+```typescript
+await runTransaction(db, async (transaction) => {
+  // Read all 3 docs
+  const [teacherSnap, studentSnap, roomSnap] = await Promise.all([
+    transaction.get(teacherRef),
+    transaction.get(studentRef),
+    transaction.get(roomRef),
+  ]);
+
+  // Check for conflicts
+  if (teacherSnap.exists()) throw new Error("CONFLICT_TEACHER");
+  if (studentSnap.exists()) throw new Error("CONFLICT_STUDENT");
+  if (roomSnap.exists()) throw new Error("CONFLICT_ROOM");
+
+  // Write to all 3 collections
+  transaction.set(teacherRef, { ... });
+  transaction.set(studentRef, { ... });
+  transaction.set(roomRef, { ... });
+});
+```
+
+### 2. Batch Conflict Check (Wizard)
+
+For wizard mode that schedules multiple entities:
+
+```typescript
+const conflicted = await checkTimeslotConflictsBatch(
+  schoolId, fileId,
+  "teachers",           // target collection
+  selectedTeacherIds,   // entity IDs to check
+  "MON_1"              // slot key
+);
+```
+
+### 3. Client-side Validation
+
+The UI provides visual feedback:
+- Cells that already have data -- display a card with subject/teacher info
+- Empty cells -- display a droppable zone
+
+---
+
+## Wizard Template System
+
+The Wizard helps schedule special activities that involve multiple entities (e.g., assemblies, scouts).
+
+### Built-in Templates
+
+```typescript
+const WIZARD_DEFAULT_TEMPLATES: WizardTemplate[] = [
+  {
+    id: "student-assembly",
+    label: "ประชุมผู้เรียน ทั้งโรงเรียน / รายระดับชั้น",
+    config: { teacherMode: "multi", studentMode: "multi", roomMode: "single" },
+  },
+  {
+    id: "teacher-assembly",
+    label: "ประชุมผู้สอน",
+    config: { teacherMode: "multi", studentMode: "multi", roomMode: "single" },
+  },
+  {
+    id: "scouts",
+    label: "ลูกเสือ เนตรนารี",
+    config: { teacherMode: "multi", studentMode: "multi", roomMode: "single" },
+  },
+  {
+    id: "multi-teacher-subject",
+    label: "วิชาหลายผู้สอน",
+    config: { teacherMode: "multi", studentMode: "single", roomMode: "single" },
+  },
+  {
+    id: "multi-student-subject",
+    label: "วิชาหลายผู้เรียน",
+    config: { teacherMode: "single", studentMode: "multi", roomMode: "single" },
+  },
+];
+```
+
+There is also a **"กำหนดเอง" (Custom)** template that allows free configuration of modes.
+
+### WizardConfigMode
+
+```typescript
+type WizardConfigMode = "none" | "single" | "multi";
+```
+
+| Mode | Meaning |
+|---|---|
+| `none` | Do not select this entity |
+| `single` | Select 1 |
+| `multi` | Select multiple |
+
+### Wizard Save Flow
+
+<Steps>
+  <Step title="Select a template">
+    The user selects a template that fits the activity.
+  </Step>
+
+  <Step title="Select entities">
+    Select teachers/students/rooms according to the configured mode (single/multi).
+  </Step>
+
+  <Step title="Select subject and periods">
+    Select the subject, day, and periods to schedule.
+  </Step>
+
+  <Step title="Check for conflicts">
+    Calls `checkTimeslotConflictsBatch()` to check all selected entities.
+  </Step>
+
+  <Step title="Save atomically">
+    Calls `saveWizardTimeslotAtomic()` to write for all entities in 1 transaction.
+  </Step>
+</Steps>
+
+---
+
+## Pin / Lock Mechanism
+
+Users can "pin" (lock) a scheduled period to prevent it from being moved or deleted:
+
+### How It Works
+
+```typescript
+// Toggle pin across all 3 collections atomically
+await toggleTimeslotPin(schoolId, fileId, entry, true);  // pin
+await toggleTimeslotPin(schoolId, fileId, entry, false); // unpin
+```
+
+### Restrictions on Pinned Cards
+
+- Cannot be dragged or moved (UI prevents it)
+- Cannot be deleted (must unpin first)
+- Displays a pin icon on the card
+
+---
+
+## Atomic Transactions
+
+<Callout type="warning">
+  Every schedule write uses Firestore's `runTransaction` or `writeBatch` to prevent:
+  - **Data inconsistency** -- incomplete writes across the 3 collections
+  - **Race conditions** -- 2 users scheduling the same period simultaneously
+  - **Conflicts** -- duplicate teacher/student/room assignments
+</Callout>
+
+### Standard Mode: `runTransaction`
+
+Uses a **read-before-write** transaction:
+1. Read all 3 docs (teacher, student, room)
+2. Check if data already exists
+3. If empty -- write all 3 within the same transaction
+4. If not empty -- throw a conflict error
+
+### Wizard Mode: `runTransaction` (multi-entity)
+
+```typescript
+await runTransaction(db, async (transaction) => {
+  // 1. Read ALL target docs
+  const snaps = await Promise.all(allRefs.map(ref => transaction.get(ref)));
+
+  // 2. Check for conflicts
+  const conflicts = [];
+  for (let i = 0; i < snaps.length; i++) {
+    if (snaps[i].exists()) {
+      conflicts.push({ type: ..., entityId: ... });
+    }
+  }
+
+  if (conflicts.length > 0) throw ...;
+
+  // 3. Write ALL atomically
+  for (const ref of allRefs) {
+    transaction.set(ref, data);
+  }
+});
+```
+
+### Bulk Delete: `writeBatch` with Chunking
+
+```typescript
+// Firestore batch limit = 500
+const CHUNK = 500;
+for (let i = 0; i < allRefs.length; i += CHUNK) {
+  const chunk = allRefs.slice(i, i + CHUNK);
+  const batch = writeBatch(db);
+  for (const ref of chunk) batch.delete(ref);
+  await batch.commit();
+}
+```
+
+---
+
+## Sidebar Menu Structure
+
+```typescript
+const SIDEBAR_MENU = [
+  { id: "schedule", label: "จัดตารางสอน" },
+  {
+    id: "advanced", label: "จัดตารางสอนแบบซับซ้อน",
+    items: [
+      { id: "wizard-add",       label: "ผู้ช่วยเพิ่มตารางพิเศษ" },
+      { id: "wizard-delete",    label: "ผู้ช่วยลบ" },
+      { id: "teacher-periods",  label: "จัดทีละผู้สอน" },
+      { id: "student-periods",  label: "จัดทีละผู้เรียน" },
+      { id: "room-periods",     label: "จัดทีละห้องเรียน" },
+    ],
+  },
+];
+```
+
+---
+
+## Zoom Levels
+
+The grid supports 3 zoom levels:
+
+```typescript
+const ZOOM_LEVELS = [
+  { cellW: 112, cellH: 84,  cardW: 108, cardH: 80, font: 10 },  // Small
+  { cellW: 128, cellH: 96,  cardW: 120, cardH: 89, font: 13 },  // Medium
+  { cellW: 140, cellH: 105, cardW: 132, cardH: 98, font: 15 },  // Large
+];
+```
+
+---
+
+## Card Field Settings
+
+Users can choose which fields to display on cards for each entity type:
+
+```typescript
+const BUILTIN_CARD_FIELDS: Record<string, { key: string; label: string }[]> = {
+  teacher: [
+    { key: "code", label: "รหัส" },
+    { key: "prefix", label: "คำนำหน้า" },
+    { key: "firstName", label: "ชื่อ" },
+    { key: "lastName", label: "นามสกุล" },
+    { key: "department", label: "หมวด/ฝ่าย" },
+  ],
+  subject: [
+    { key: "code", label: "รหัสวิชา" },
+    { key: "name", label: "ชื่อวิชา" },
+  ],
+  student: [
+    { key: "code", label: "รหัส" },
+    { key: "className", label: "ชั้นเรียน" },
+    { key: "gradeGroup", label: "ระดับชั้น" },
+  ],
+  room: [
+    { key: "code", label: "รหัสห้อง" },
+    { key: "name", label: "ชื่อห้อง" },
+    { key: "description", label: "รายละเอียด" },
+  ],
+};
+```
+
+Card field settings are stored in Firestore at the `schedules/setting` document.

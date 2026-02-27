@@ -1,0 +1,108 @@
+---
+title: "Register and Sign In"
+description: "How to create an account, sign in with email or Google, and reset your password"
+---
+
+## Overview
+
+The Tarangson sign-in page supports three modes: sign in with email/password, register a new account, and reset your password. You can also sign in instantly with your Google account.
+
+The system uses `Firebase Authentication` to manage all user accounts.
+
+---
+
+## Register with Email
+
+<Steps>
+  <Step title="Open the registration page">
+    Go to the sign-in page and click the **Register** (สมัครสมาชิก) link at the bottom of the form.
+  </Step>
+  <Step title="Fill in your details">
+    Enter the email address and password you want to use, then re-enter your password in the **Confirm Password** (ยืนยันรหัสผ่าน) field.
+  </Step>
+  <Step title="Click Register">
+    Click the **Register** (สมัครสมาชิก) button to create your account. The system will automatically redirect you to the school setup page.
+  </Step>
+</Steps>
+
+<Callout type="warning" title="Password requirements">
+  Your password must be at least 6 characters long, and both password fields must match.
+</Callout>
+
+---
+
+## Sign In with Email
+
+<Steps>
+  <Step title="Enter your email and password">
+    Enter the email and password you used when registering.
+  </Step>
+  <Step title="Click Sign In">
+    Click the **Sign In** (เข้าสู่ระบบ) button. The system will verify your credentials and take you to the Dashboard if your school is already set up, or to the Setup Wizard if it is not.
+  </Step>
+</Steps>
+
+---
+
+## Sign In with Google
+
+<Steps>
+  <Step title="Click the Google button">
+    On the sign-in or registration page, click **Sign in with Google** (เข้าสู่ระบบด้วย Google) or **Register with Google** (สมัครด้วย Google).
+  </Step>
+  <Step title="Choose a Google account">
+    A Google pop-up window will appear. Select the account you want to use.
+  </Step>
+  <Step title="Sign-in complete">
+    If this is your first time, the system will automatically create an account for you and redirect you to the school setup page.
+  </Step>
+</Steps>
+
+<Callout type="info" title="Pop-up blocked?">
+  If your browser blocks the pop-up, you will see a warning message. Allow pop-ups for this website and try again.
+</Callout>
+
+---
+
+## Forgot Password
+
+<Steps>
+  <Step title="Click the forgot password link">
+    On the sign-in page, click the **Forgot password?** (ลืมรหัสผ่าน?) link below the password field.
+  </Step>
+  <Step title="Enter your email">
+    Enter the email address you used when registering.
+  </Step>
+  <Step title="Click Send Reset Link">
+    Click the **Send Reset Link** (ส่งลิงก์รีเซ็ต) button. The system will send an email with a password reset link to your inbox.
+  </Step>
+  <Step title="Set a new password">
+    Open the email you received, click the password reset link, and set your new password.
+  </Step>
+</Steps>
+
+<Callout type="tip" title="Didn't receive the email?">
+  Check your spam or junk folder. If you still can't find it, try sending the reset link again.
+</Callout>
+
+---
+
+## Common Errors
+
+| Error | Cause |
+|---|---|
+| Invalid email format | The email address you entered is not in a valid format |
+| This email is already in use | An account with this email already exists -- try signing in instead |
+| Incorrect email or password | The credentials you entered do not match any account |
+| Password must be at least 6 characters | The password you entered is too short |
+| Too many requests | You have tried signing in too many times -- wait a moment and try again |
+| Network error | Check your internet connection |
+
+---
+
+## After Signing In
+
+After you successfully sign in, the system checks whether you have already set up your school:
+
+- **Already set up** -- You are taken to the [Dashboard](/getting-started/dashboard)
+- **Not yet set up** -- You are taken to the [Setup Wizard](/getting-started/setup-wizard) to get started

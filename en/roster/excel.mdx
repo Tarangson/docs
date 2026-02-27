@@ -1,0 +1,195 @@
+---
+title: "Import and Export Excel"
+description: "Guide to importing data from Excel files and exporting data to Excel for teachers, students, rooms, and subjects"
+---
+
+Tarangson supports importing and exporting data via Excel files, allowing you to prepare large amounts of data in a familiar spreadsheet application and then bring it into the system quickly.
+
+## Supported File Formats
+
+The system supports 3 file formats:
+
+- `.xlsx` -- Microsoft Excel (recommended)
+- `.xls` -- Legacy Microsoft Excel
+- `.csv` -- Comma-Separated Values
+
+<Callout type="warning">
+  If you use a different file format, the system will display the message: "Only .xlsx, .xls, or .csv files are supported."
+</Callout>
+
+## Export Data
+
+You can export existing data to an Excel file from any data management page.
+
+<Steps>
+  <Step title="Open the data management page">
+    Navigate to the data management page you want to export from, such as [Teachers](/roster/teachers), [Students](/roster/students), [Rooms](/roster/rooms), or [Subjects](/roster/subjects).
+  </Step>
+  <Step title="Click Export">
+    Click the **Export Excel** button in the toolbar. The system will download the Excel file immediately.
+  </Step>
+</Steps>
+
+### Exported File Names
+
+| Data | File Name |
+|------|-----------|
+| Teachers | `ผู้สอน.xlsx` |
+| Students | `นักเรียน.xlsx` |
+| Rooms | `ห้องเรียน.xlsx` |
+| Subjects | `วิชาเรียน.xlsx` |
+
+<Callout type="info">
+  Exported files include any custom fields you have added, using the field names as column headers.
+</Callout>
+
+## Download Template
+
+If you want to prepare data for import, we recommend downloading a template first to get an Excel file with the correct column headers expected by the system.
+
+Click the **Download Template** button in the toolbar. The system will download an empty Excel file containing only the header row.
+
+### Template File Names
+
+| Data | File Name |
+|------|-----------|
+| Teachers | `แม่แบบผู้สอน.xlsx` |
+| Students | `แม่แบบนักเรียน.xlsx` |
+| Rooms | `แม่แบบห้องเรียน.xlsx` |
+| Subjects | `แม่แบบวิชาเรียน.xlsx` |
+
+## Import Data
+
+<Steps>
+  <Step title="Prepare the Excel file">
+    Prepare an Excel file with column headers that match what the system expects (see column details below). You can use a downloaded template as a starting point.
+  </Step>
+  <Step title="Select the file">
+    Click the **Import Excel** button and choose a file from your computer.
+  </Step>
+  <Step title="Review the preview">
+    The system will read the file and display a preview of the data for you to review before importing. Verify that the data appears as expected.
+  </Step>
+  <Step title="Choose the import mode">
+    Select an import mode:
+
+    - **Append** -- adds the new data after the existing records. The ordering continues from the last entry.
+    - **Replace All** -- deletes all existing data and replaces it with the data from the file.
+  </Step>
+  <Step title="Confirm">
+    Click **Confirm** to import the data. The system will display the number of successfully imported entries.
+  </Step>
+</Steps>
+
+<Callout type="warning">
+  **Replace All** mode will delete all existing data before importing. Deleted data cannot be recovered. We recommend exporting your current data first if you want to keep a backup.
+</Callout>
+
+## Required Column Headers
+
+The system uses Thai column header names for matching. Column names must match exactly (the system automatically trims leading and trailing spaces).
+
+<Tabs>
+  <Tab title="Teachers">
+    | Column | Description | Validation |
+    |--------|------------|------------|
+    | `รหัสครู` (Teacher ID) | Unique identifier | Header required |
+    | `คำนำหน้า` (Title/Prefix) | e.g. นาย (Mr.), นาง (Mrs.) | Header required |
+    | `ชื่อ` (First Name) | First name | Header required, value must not be empty |
+    | `นามสกุล` (Last Name) | Last name | Header required, value must not be empty |
+    | `หมวด/ฝ่าย` (Department) | Subject group | Header required, value must not be empty |
+
+    <Callout type="info">
+      Rows missing both **รหัสครู** (Teacher ID) and **ชื่อ** (First Name) will be skipped. Rows with missing First Name, Last Name, or Department values will show an error that must be fixed before importing.
+    </Callout>
+  </Tab>
+  <Tab title="Students">
+    | Column | Description | Validation |
+    |--------|------------|------------|
+    | `รหัส` (ID) | Class identifier | Header required |
+    | `ชื่อชั้น` (Class Name) | Class section name | Header required |
+    | `ระดับชั้น` (Grade Level) | Grade level group | Header required |
+
+    <Callout type="info">
+      Rows missing both **รหัส** (ID) and **ชื่อชั้น** (Class Name) will be skipped automatically.
+    </Callout>
+  </Tab>
+  <Tab title="Rooms">
+    | Column | Description | Validation |
+    |--------|------------|------------|
+    | `รหัสห้อง` (Room ID) | Room identifier | Optional |
+    | `ชื่อห้อง` (Room Name) | Room name | Header required |
+    | `รายละเอียดห้อง` (Room Description) | Description | Optional |
+
+    <Callout type="info">
+      The **ชื่อห้อง** (Room Name) column is required at minimum. Rows missing both **รหัสห้อง** (Room ID) and **ชื่อห้อง** (Room Name) will be skipped.
+    </Callout>
+  </Tab>
+  <Tab title="Subjects">
+    | Column | Description | Validation |
+    |--------|------------|------------|
+    | `รหัสวิชา` (Subject Code) | Subject identifier | Header required |
+    | `ชื่อรายวิชา` (Subject Name) | Subject name | Header required |
+
+    <Callout type="info">
+      Rows missing both **รหัสวิชา** (Subject Code) and **ชื่อรายวิชา** (Subject Name) will be skipped automatically.
+    </Callout>
+  </Tab>
+</Tabs>
+
+## Handling Custom Fields in Excel
+
+If you have added custom fields in the system, those fields will be included in both the export and template Excel files.
+
+### Export
+
+Custom field columns appear after the default columns, using the **field name** you set as the column header.
+
+### Import
+
+When importing an Excel file, the system matches columns to custom fields by comparing column header names with field names.
+
+- **Text** fields (`text`) -- values are stored as text
+- **Number** fields (`number`) -- values are converted to numbers
+- **Select** fields (`select`) -- values are stored as text, and any values not already in the options list are automatically added to the list
+
+<Callout type="info">
+  If a column in the file does not match any custom field, that column is simply skipped without causing an error.
+</Callout>
+
+## Automatic Dropdown Option Updates on Import
+
+For teacher data, the system automatically manages dropdown options when importing:
+
+<Tabs>
+  <Tab title="Append Mode">
+    Any **Title/Prefix** (คำนำหน้า) and **Department** (หมวด/ฝ่าย) values that do not already exist in the current options list will be added automatically.
+
+    Example: If the current prefix options are `นาย` (Mr.), `นาง` (Mrs.), `นางสาว` (Ms.) and the file contains `ดร.` (Dr.), the system will add `ดร.` to the options list.
+  </Tab>
+  <Tab title="Replace Mode">
+    All existing options are cleared and replaced with only the values found in the new dataset.
+
+    Example: If the new data contains only `นาย` (Mr.) and `นาง` (Mrs.), the prefix options list will contain just these 2 values.
+  </Tab>
+</Tabs>
+
+## Tips for Preparing Your File
+
+<Card title="Start with a template" icon="lightbulb">
+  Always download a template first to ensure your column headers are correct, especially if you have custom fields.
+</Card>
+
+<Card title="Check required data" icon="circle-check">
+  For teacher data, make sure every row has **ชื่อ** (First Name), **นามสกุล** (Last Name), and **หมวด/ฝ่าย** (Department) filled in. Otherwise, the system will report an error and indicate the row numbers with issues.
+</Card>
+
+<Card title="Watch for whitespace in column headers" icon="triangle-exclamation">
+  The system automatically trims leading and trailing whitespace from column headers, but the column names must be spelled exactly as expected.
+</Card>
+
+## Limitations
+
+- The system reads data from the **first sheet** of the Excel file only.
+- Rows that have no data in the primary fields (e.g. both ID and Name are empty) are skipped automatically.
+- Column headers must be in the **first row** of the sheet.

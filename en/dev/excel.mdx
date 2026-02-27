@@ -1,0 +1,331 @@
+---
+title: "Excel Import/Export System"
+description: "How Excel import/export, column mapping, custom fields, and the template system work"
+---
+
+## Overview
+
+The file `app/lib/excel.ts` handles roster data import/export via Excel files. It supports:
+
+- **Export** -- exports data + custom fields to `.xlsx` files
+- **Import** -- reads `.xlsx`, `.xls`, `.csv` files and parses them into TypeScript objects
+- **Template Download** -- downloads blank Excel templates for import
+
+Library used: **SheetJS (xlsx)** version `^0.18.5`
+
+```typescript
+import * as XLSX from "xlsx";
+```
+
+---
+
+## Export Functions
+
+### `exportTeachersToExcel(teachers, customFields)`
+
+Exports teacher data to an Excel file.
+
+```typescript
+function exportTeachersToExcel(
+  teachers: Teacher[],
+  customFields: CustomFieldDef[]
+): void
+```
+
+**Headers:** `รหัสครู` (Teacher Code), `คำนำหน้า` (Prefix), `ชื่อ` (First Name), `นามสกุล` (Last Name), `หมวด/ฝ่าย` (Department) + custom field labels
+
+### `exportStudentsToExcel(students, customFields)`
+
+```typescript
+function exportStudentsToExcel(
+  students: Student[],
+  customFields: CustomFieldDef[]
+): void
+```
+
+**Headers:** `รหัส` (Code), `ชื่อชั้น` (Class Name), `ระดับชั้น` (Grade Level) + custom field labels
+
+### `exportRoomsToExcel(rooms, customFields)`
+
+```typescript
+function exportRoomsToExcel(
+  rooms: Room[],
+  customFields: CustomFieldDef[]
+): void
+```
+
+**Headers:** `รหัสห้อง` (Room Code), `ชื่อห้อง` (Room Name), `รายละเอียดห้อง` (Room Description) + custom field labels
+
+### `exportSubjectsToExcel(subjects, customFields)`
+
+```typescript
+function exportSubjectsToExcel(
+  subjects: Subject[],
+  customFields: CustomFieldDef[]
+): void
+```
+
+**Headers:** `รหัสวิชา` (Subject Code), `ชื่อรายวิชา` (Subject Name) + custom field labels
+
+### Internal: `downloadExcel(sheetName, headers, data)`
+
+A helper function shared by all export functions:
+
+```typescript
+function downloadExcel(
+  sheetName: string,
+  headers: string[],
+  data: (string | number)[][]
+): void {
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, `${sheetName}.xlsx`);
+}
+```
+
+---
+
+## Template Download Functions
+
+Downloads blank templates (headers only) for users to fill in and import back:
+
+| Function | Filename | Headers |
+|---|---|---|
+| `downloadTeacherTemplate(customFields)` | `แม่แบบผู้สอน.xlsx` (Teacher Template) | รหัสครู, คำนำหน้า, ชื่อ, นามสกุล, หมวด/ฝ่าย + custom |
+| `downloadStudentTemplate(customFields)` | `แม่แบบนักเรียน.xlsx` (Student Template) | รหัส, ชื่อชั้น, ระดับชั้น + custom |
+| `downloadRoomTemplate(customFields)` | `แม่แบบห้องเรียน.xlsx` (Room Template) | รหัสห้อง, ชื่อห้อง, รายละเอียดห้อง + custom |
+| `downloadSubjectTemplate(customFields)` | `แม่แบบวิชาเรียน.xlsx` (Subject Template) | รหัสวิชา, ชื่อรายวิชา + custom |
+
+<Callout type="info">
+  Templates include custom field headers, so each template is dynamic based on the custom fields the school has defined.
+</Callout>
+
+---
+
+## Import (Parse) Functions
+
+### Import Steps
+
+<Steps>
+  <Step title="Validate file extension">
+    Only `.xlsx`, `.xls`, and `.csv` are supported.
+
+    ```typescript
+    const ext = fileName.split(".").pop()?.toLowerCase();
+    if (!ext || !["xlsx", "xls", "csv"].includes(ext)) {
+      throw new Error("รองรับเฉพาะไฟล์ .xlsx, .xls หรือ .csv เท่านั้น");
+    }
+    ```
+  </Step>
+
+  <Step title="Read the file with XLSX">
+    ```typescript
+    const data = new Uint8Array(buffer);
+    const wb = XLSX.read(data, { type: "array" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rawRows = XLSX.utils.sheet_to_json<Record<string, string>>(ws);
+    ```
+  </Step>
+
+  <Step title="Normalize headers">
+    Trims whitespace from header keys on every row:
+
+    ```typescript
+    const rows = rawRows.map((row) => {
+      const cleaned: Record<string, string> = {};
+      for (const [key, val] of Object.entries(row)) {
+        cleaned[key.trim()] = val;
+      }
+      return cleaned;
+    });
+    ```
+  </Step>
+
+  <Step title="Check required headers">
+    Each entity type has different required headers:
+
+    ```typescript
+    // Teachers
+    const TEACHER_REQUIRED_HEADERS = [
+      "รหัสครู", "คำนำหน้า", "ชื่อ", "นามสกุล", "หมวด/ฝ่าย"
+    ];
+
+    // Students
+    const STUDENT_REQUIRED_HEADERS = ["รหัส", "ชื่อชั้น", "ระดับชั้น"];
+
+    // Rooms
+    const ROOM_REQUIRED_HEADERS = ["ชื่อห้อง"];
+
+    // Subjects
+    const SUBJECT_REQUIRED_HEADERS = ["รหัสวิชา", "ชื่อรายวิชา"];
+    ```
+  </Step>
+
+  <Step title="Map rows to TypeScript objects">
+    Each row is mapped to an entity object with a newly generated ID:
+
+    ```typescript
+    const teachers: Teacher[] = rows.map((row) => {
+      const cf: Record<string, string | number> = {};
+      customFields.forEach((f) => {
+        const val = row[f.label];
+        cf[f.id] = (val !== undefined && val !== "")
+          ? (f.type === "number" ? Number(val) : String(val))
+          : "";
+      });
+      return {
+        id: generateId("t"),
+        code: String(row["รหัสครู"] || "").trim(),
+        prefix: String(row["คำนำหน้า"] || "").trim(),
+        firstName: String(row["ชื่อ"] || "").trim(),
+        lastName: String(row["นามสกุล"] || "").trim(),
+        department: String(row["หมวด/ฝ่าย"] || "").trim(),
+        customFields: cf,
+      };
+    });
+    ```
+  </Step>
+
+  <Step title="Filter out empty rows">
+    Filters out rows that have no significant data:
+
+    ```typescript
+    return teachers.filter((t) => t.code || t.firstName);
+    ```
+  </Step>
+</Steps>
+
+### Parse Functions
+
+#### `parseTeachersFromExcel(buffer, fileName, customFields)`
+
+```typescript
+async function parseTeachersFromExcel(
+  buffer: ArrayBuffer,
+  fileName: string,
+  customFields: CustomFieldDef[]
+): Promise<Teacher[]>
+```
+
+**Column mapping:**
+
+| Column Header | Field |
+|---|---|
+| `รหัสครู` (Teacher Code) | `code` |
+| `คำนำหน้า` (Prefix) | `prefix` |
+| `ชื่อ` (First Name) | `firstName` |
+| `นามสกุล` (Last Name) | `lastName` |
+| `หมวด/ฝ่าย` (Department) | `department` |
+| *(custom field label)* | `customFields[fieldId]` |
+
+#### `parseStudentsFromExcel(buffer, fileName, customFields)`
+
+```typescript
+async function parseStudentsFromExcel(
+  buffer: ArrayBuffer,
+  fileName: string,
+  customFields: CustomFieldDef[]
+): Promise<Student[]>
+```
+
+**Column mapping:**
+
+| Column Header | Field |
+|---|---|
+| `รหัส` (Code) | `code` |
+| `ชื่อชั้น` (Class Name) | `className` |
+| `ระดับชั้น` (Grade Level) | `gradeGroup` |
+
+#### `parseRoomsFromExcel(buffer, fileName, customFields)`
+
+```typescript
+async function parseRoomsFromExcel(
+  buffer: ArrayBuffer,
+  fileName: string,
+  customFields: CustomFieldDef[]
+): Promise<Room[]>
+```
+
+**Column mapping:**
+
+| Column Header | Field |
+|---|---|
+| `รหัสห้อง` (Room Code) | `code` |
+| `ชื่อห้อง` (Room Name) | `name` |
+| `รายละเอียดห้อง` (Room Description) | `description` |
+
+#### `parseSubjectsFromExcel(buffer, fileName, customFields)`
+
+```typescript
+async function parseSubjectsFromExcel(
+  buffer: ArrayBuffer,
+  fileName: string,
+  customFields: CustomFieldDef[]
+): Promise<Subject[]>
+```
+
+**Column mapping:**
+
+| Column Header | Field |
+|---|---|
+| `รหัสวิชา` (Subject Code) | `code` |
+| `ชื่อรายวิชา` (Subject Name) | `name` |
+
+---
+
+## Custom Field Handling
+
+Custom fields are handled automatically in both import and export:
+
+### Export
+
+Custom field labels are appended as column headers:
+
+```typescript
+const headers = [
+  "รหัสครู", "คำนำหน้า", "ชื่อ", "นามสกุล", "หมวด/ฝ่าย",
+  ...customFields.map((f) => f.label),  // Append custom field labels
+];
+```
+
+### Import
+
+During import, column headers are matched against `customFieldDef.label` and values are stored in the `customFields` map:
+
+```typescript
+customFields.forEach((f) => {
+  const val = row[f.label];  // Match by label
+  cf[f.id] = (val !== undefined && val !== "")
+    ? (f.type === "number" ? Number(val) : String(val))
+    : "";
+});
+```
+
+<Callout type="info">
+  Custom fields of type `"number"` are automatically converted to `Number`, while `"text"` and `"select"` fields are converted to `String`.
+</Callout>
+
+---
+
+## ID Generation
+
+Every imported entity always receives a new ID:
+
+```typescript
+id: generateId("t"),   // teacher: "t_l3x2k4_abc123"
+id: generateId("st"),  // student: "st_l3x2k4_abc123"
+id: generateId("r"),   // room: "r_l3x2k4_abc123"
+id: generateId("sub"), // subject: "sub_l3x2k4_abc123"
+```
+
+---
+
+## Error Handling
+
+The system throws errors with Thai-language messages to make them easy for users to understand:
+
+| Scenario | Error Message |
+|---|---|
+| Invalid file extension | `"รองรับเฉพาะไฟล์ .xlsx, .xls หรือ .csv เท่านั้น"` (Only .xlsx, .xls, or .csv files are supported) |
+| Required column not found | `"ไม่พบคอลัมน์ที่จำเป็น: {column names}"` (Required columns not found: {column names}) |

@@ -1,0 +1,130 @@
+---
+title: "Architecture Overview"
+description: "Architecture and project structure of the Tarangson Web Application"
+---
+
+## Tech Stack
+
+Tarangson webapp is built with the following modern stack:
+
+| Technology | Version | Purpose |
+|---|---|---|
+| **Next.js** | 16.1.6 | App Router framework |
+| **React** | 19.2.3 | UI library |
+| **TypeScript** | ^5 | Type-safe JavaScript |
+| **Tailwind CSS** | ^4 | Utility-first CSS framework |
+| **shadcn/ui** | ^3.8.4 (CLI) | Component library built on Radix UI |
+| **Radix UI** | ^1.4.3 | Accessible UI primitives |
+| **Firebase** | ^12.9.0 | Auth, Firestore, Storage |
+| **dnd-kit** | ^6.3.1 (core) | Drag-and-drop for timetable scheduling |
+| **XLSX (SheetJS)** | ^0.18.5 | Import/Export Excel |
+| **Sonner** | ^2.0.7 | Toast notifications |
+| **Lucide React** | ^0.564.0 | Icon library |
+
+### Additional Libraries
+
+- **class-variance-authority** -- manages component style variants
+- **clsx** + **tailwind-merge** -- manages conditional class names
+- **next-themes** -- Dark/Light mode
+- **thai-address-autocomplete-react** -- Thai address autocomplete
+
+## Project Structure
+
+```
+tarangson-webapp/
+├── app/
+│   ├── layout.tsx              # Root layout (AuthProvider, Toaster, Kanit font)
+│   ├── page.tsx                # Landing page (redirect)
+│   ├── globals.css             # Global styles (Tailwind)
+│   ├── favicon.ico
+│   │
+│   ├── context/
+│   │   └── AuthContext.tsx      # Firebase Auth context provider
+│   │
+│   ├── components/
+│   │   └── ProtectedRoute.tsx   # Route guard (auth + setup check)
+│   │
+│   ├── lib/
+│   │   ├── firebase.ts          # Firebase app initialization
+│   │   ├── firestore.ts         # Firestore CRUD utility functions
+│   │   ├── types.ts             # TypeScript interfaces & constants
+│   │   └── excel.ts             # Excel import/export utilities
+│   │
+│   ├── login/                   # Login page
+│   ├── setup/                   # Setup wizard (4 steps)
+│   ├── dashboard/               # Main dashboard
+│   ├── settings/                # School settings
+│   ├── academic/                # Academic calendar config
+│   │
+│   ├── teachers/                # Teacher management (CRUD)
+│   ├── students/                # Student management (CRUD)
+│   ├── rooms/                   # Room management (CRUD)
+│   ├── subjects/                # Subject management (CRUD)
+│   │
+│   └── timetable/
+│       ├── page.tsx             # Timetable editor (main scheduling page)
+│       ├── new/                 # Create new timetable file
+│       ├── files/
+│       │   └── [fileId]/
+│       │       └── manage/      # Manage specific timetable file
+│       └── view/
+│           └── [mode]/          # View timetable (teacher/student/room)
+│
+├── components/
+│   └── ui/                      # shadcn/ui components (Button, Dialog, etc.)
+│
+├── lib/
+│   └── utils.ts                 # cn() utility function
+│
+├── public/                      # Static assets
+├── package.json
+├── tsconfig.json
+├── next.config.ts
+└── tailwind.config.ts
+```
+
+## Key Architectural Principles
+
+### App Router (Next.js 16)
+
+The entire application uses the Next.js App Router -- every page lives under the `app/` directory and uses the `"use client"` directive, since this is a client-side application that depends on Firebase Auth state.
+
+### Authentication Flow
+
+```
+layout.tsx (AuthProvider)
+  └── ProtectedRoute
+       ├── Not logged in → redirect /login
+       ├── Setup incomplete → redirect /setup
+       └── Ready → render children
+```
+
+### Data Architecture
+
+All data is stored in **Firestore** using a document-based schema:
+
+- **School-scoped data** -- uses `{schoolId}` as the root document
+- **Roster data** -- stored as sub-collections under `academicDefaults`
+- **Timetable data** -- denormalized into 3 collections (teachers/students/rooms) for fast queries
+
+### Denormalized Schedule Storage
+
+<Callout type="info">
+  Timetable data is stored in a **denormalized** fashion -- written redundantly across 3 collections (teacher, student, room) so that loading each view is fast without cross-collection queries. Every write uses `runTransaction` to prevent conflicts.
+</Callout>
+
+### Font & Localization
+
+- Uses the **Kanit** font for Thai text (Google Fonts)
+- Primary language is Thai (`lang="th"`)
+- Default timezone: `Asia/Bangkok`
+
+## Dev Dependencies
+
+| Package | Purpose |
+|---|---|
+| `@tailwindcss/postcss` | Tailwind CSS v4 PostCSS plugin |
+| `eslint` + `eslint-config-next` | Linting |
+| `tw-animate-css` | CSS animation utilities for Tailwind |
+| `typescript` | TypeScript compiler |
+| `shadcn` | CLI tool for installing shadcn/ui components |

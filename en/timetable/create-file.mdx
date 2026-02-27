@@ -1,0 +1,75 @@
+---
+title: "Create a Timetable File"
+description: "How to create a new timetable file, set a name, semester dates, and additional details"
+---
+
+## Overview
+
+Before you start scheduling, you need to create a **Timetable File** first. This file serves as a workspace for a particular semester or academic year, storing all your teachers, students, rooms, subjects, and timetable data in one place.
+
+<Callout type="info">
+  You can create multiple timetable files — for example, separate files for Semester 1 and Semester 2, or a backup file for experimenting with different schedule arrangements.
+</Callout>
+
+## Steps to Create a New File
+
+<Steps>
+  <Step title="Go to the file creation page">
+    Navigate to the **File Management** page and click the **Create New File** button, or go directly to the URL `/timetable/new`.
+  </Step>
+
+  <Step title="Enter the file name">
+    Enter a name in the **File Name** field, which is required. Use a descriptive name such as `Semester 1, Academic Year 2027`.
+  </Step>
+
+  <Step title="Set the date range (optional)">
+    Specify the **Start Date** and **End Date** of the semester. This information helps you easily distinguish files for different semesters.
+  </Step>
+
+  <Step title="Add notes (optional)">
+    Enter any additional details in the **Notes / Additional Details** field, such as things to keep in mind when scheduling this semester.
+  </Step>
+
+  <Step title="Continue">
+    Click the **Continue** button. The system will create the file and take you to the next step of the Timetable Creation Wizard.
+  </Step>
+</Steps>
+
+## Data Stored in a File
+
+Each timetable file stores the following data:
+
+| Field | Description | Required |
+|---|---|---|
+| `name` | File name | Yes |
+| `startDate` | Semester start date | No |
+| `endDate` | Semester end date | No |
+| `description` | Additional details | No |
+| `createdAt` | Creation date (recorded automatically) | Auto |
+| `updatedAt` | Last modified date (recorded automatically) | Auto |
+| `createdBy` | Creator's name and email (recorded automatically) | Auto |
+
+## After Creating a File
+
+Once the file is created successfully, the system will take you into the **Timetable Creation Wizard**, a 6-step process for setting up all the foundational data:
+
+<Cards>
+  <Card title="Base Timetable" href="/timetable/wizard">
+    Set school days, number of periods, and the time for each period.
+  </Card>
+  <Card title="File Management" href="/timetable/files">
+    View all files, open, or delete a file.
+  </Card>
+</Cards>
+
+## Managing Multiple Files
+
+You can create an unlimited number of timetable files. Common use cases include:
+
+- **Separate by semester** — Create separate files for Semester 1 and Semester 2.
+- **Experiment with schedules** — Create a backup file to try out different schedule arrangements before using the final version.
+- **Separate by grade level** — Create separate files for grade levels that have different timetable structures.
+
+<Callout type="warning">
+  When you delete a file, all data within it will be permanently removed, including timetables, teachers, students, rooms, and subjects. This action cannot be undone.
+</Callout>

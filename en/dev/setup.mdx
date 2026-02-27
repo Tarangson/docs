@@ -1,0 +1,150 @@
+---
+title: "Development Environment Setup"
+description: "How to install and start developing the Tarangson Web Application"
+---
+
+## Prerequisites
+
+Before you begin development, make sure you have the following installed:
+
+- **Node.js** 18+ (v20 LTS or later recommended)
+- **npm** (included with Node.js)
+- **Git**
+- A Firebase project (for Auth + Firestore + Storage)
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone repository">
+    ```bash
+    git clone https://github.com/your-org/tarangson-webapp.git
+    cd tarangson-webapp
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    ```bash
+    npm install
+    ```
+
+    Key dependencies that will be installed:
+    - `next@16.1.6`, `react@19.2.3`, `react-dom@19.2.3`
+    - `firebase@^12.9.0`
+    - `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/modifiers`
+    - `xlsx@^0.18.5`
+    - `radix-ui@^1.4.3`, `lucide-react`, `sonner`
+    - `tailwindcss@^4`, `tailwind-merge`, `clsx`
+  </Step>
+
+  <Step title="Set up Firebase project">
+    1. Go to [Firebase Console](https://console.firebase.google.com)
+    2. Create a new project or select an existing one
+    3. Enable the following services:
+       - **Authentication** -- enable Email/Password and Google sign-in providers
+       - **Firestore Database** -- create a database named `tarangson` (named database)
+       - **Storage** -- for storing school logos
+    4. Go to Project Settings > General > Your apps > Add a Web app
+    5. Copy the Firebase config values
+  </Step>
+
+  <Step title="Create the .env.local file">
+    Create a `.env.local` file at the project root:
+
+    ```bash
+    # Firebase Configuration
+    NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+    NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
+    NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
+    ```
+
+    <Callout type="warning">
+      Firestore uses a **named database** called `"tarangson"`, not the default database -- you must create the named database in the Firebase Console first.
+    </Callout>
+  </Step>
+
+  <Step title="Run development server">
+    ```bash
+    npm run dev
+    ```
+
+    Open [http://localhost:3000](http://localhost:3000) in your browser.
+  </Step>
+</Steps>
+
+## Available Scripts
+
+```json
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  }
+}
+```
+
+| Script | Command | Description |
+|---|---|---|
+| `dev` | `npm run dev` | Start the dev server with hot reload |
+| `build` | `npm run build` | Build for production |
+| `start` | `npm run start` | Run the production server (requires a build first) |
+| `lint` | `npm run lint` | Check code with ESLint |
+
+## Firebase Configuration Priority
+
+The `app/lib/firebase.ts` file reads configuration in the following order:
+
+1. **`FIREBASE_WEBAPP_CONFIG`** or **`NEXT_PUBLIC_FIREBASE_WEBAPP_CONFIG`** -- JSON string (used with Firebase App Hosting)
+2. **Individual environment variables** -- `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, etc. (used with `.env.local`)
+
+```typescript
+// Example from firebase.ts
+const firebaseConfig = getFirebaseConfig();
+
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
+let storage: FirebaseStorage | null = null;
+
+if (firebaseConfig.apiKey) {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  auth = getAuth(app);
+  db = getFirestore(app, "tarangson"); // Named database
+  storage = getStorage(app);
+}
+```
+
+<Callout type="info">
+  Firebase App Hosting automatically injects `FIREBASE_WEBAPP_CONFIG` as a JSON string. For local development, use `.env.local` instead.
+</Callout>
+
+## Build for Production
+
+```bash
+npm run build
+```
+
+Next.js will build static pages and server-side rendering output into the `.next/` directory.
+
+To deploy to Firebase App Hosting:
+
+```bash
+firebase deploy --only hosting
+```
+
+## Key Files Reference
+
+| File | Purpose |
+|---|---|
+| `app/layout.tsx` | Root layout -- wraps with `AuthProvider`, Kanit font, `Toaster` |
+| `app/lib/firebase.ts` | Firebase initialization (app, auth, db, storage) |
+| `app/lib/firestore.ts` | All Firestore utility functions |
+| `app/lib/types.ts` | TypeScript types, interfaces, constants |
+| `app/lib/excel.ts` | Excel import/export functions |
+| `app/context/AuthContext.tsx` | Auth state management |
+| `app/components/ProtectedRoute.tsx` | Route guard component |

@@ -1,0 +1,302 @@
+---
+title: "Authentication System"
+description: "Firebase Auth setup, AuthContext, login/register flows, and route protection"
+---
+
+## Overview
+
+Tarangson uses **Firebase Authentication** for user identity management. It supports 2 methods:
+
+1. **Email/Password** -- sign up and log in with email
+2. **Google OAuth** -- log in with a Google account (popup flow)
+
+When a user logs in successfully, the system checks whether they have a school. If they don't, a school document is created automatically.
+
+---
+
+## Firebase Initialization
+
+The file `app/lib/firebase.ts` handles Firebase initialization:
+
+```typescript
+import { initializeApp, getApps, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
+
+// Only initialize if we have a valid API key
+if (firebaseConfig.apiKey) {
+  app = getApps().length === 0
+    ? initializeApp(firebaseConfig)
+    : getApps()[0];
+  auth = getAuth(app);
+  db = getFirestore(app, "tarangson"); // Named database
+  storage = getStorage(app);
+}
+
+export { app, auth, db, storage };
+```
+
+<Callout type="info">
+  If no API key is available (e.g., at build-time or during SSR), the variables `auth`, `db`, and `storage` will be `null` -- every function in the codebase must check for null before using them.
+</Callout>
+
+---
+
+## AuthContext
+
+The file `app/context/AuthContext.tsx` is a React Context that wraps the entire app:
+
+### Interface
+
+```typescript
+interface AuthContextType {
+  user: User | null;            // Firebase User object
+  loading: boolean;             // Loading auth state
+  schoolId: string | null;      // School ID the user belongs to
+  setupComplete: boolean;       // Whether the school has completed setup
+  checkingSchool: boolean;      // Checking school membership
+
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  logout: () => Promise<void>;
+  setSetupComplete: (v: boolean) => void;
+}
+```
+
+### Auth State Flow
+
+```
+onAuthStateChanged(auth, async (currentUser) => {
+  if (currentUser) {
+    // 1. Check if the user has a school
+    let result = await checkUserHasSchool(currentUser.uid);
+
+    if (!result) {
+      // 2. New user → automatically create a school document
+      result = await createSchoolForNewUser(currentUser);
+    }
+
+    // 3. Set state
+    setSchoolId(result.schoolId);
+    setSetupComplete(result.setupComplete);
+  } else {
+    // Logged out
+    setSchoolId(null);
+    setSetupComplete(false);
+  }
+});
+```
+
+<Callout type="warning">
+  When a new user signs up, the system automatically creates a school document via `createSchoolForNewUser()` with `setupComplete: false` -- the user must complete the setup wizard before they can use the app.
+</Callout>
+
+### Authentication Methods
+
+<Tabs>
+  <Tab title="Email/Password Login">
+    ```typescript
+    const loginWithEmail = async (email: string, password: string) => {
+      if (!auth) throw new Error("Firebase Auth ยังไม่พร้อมใช้งาน");
+      await signInWithEmailAndPassword(auth, email, password);
+    };
+    ```
+  </Tab>
+
+  <Tab title="Email/Password Register">
+    ```typescript
+    const registerWithEmail = async (email: string, password: string) => {
+      if (!auth) throw new Error("Firebase Auth ยังไม่พร้อมใช้งาน");
+      await createUserWithEmailAndPassword(auth, email, password);
+    };
+    ```
+  </Tab>
+
+  <Tab title="Google OAuth">
+    ```typescript
+    const loginWithGoogle = async () => {
+      if (!auth) throw new Error("Firebase Auth ยังไม่พร้อมใช้งาน");
+      const provider = new GoogleAuthProvider();
+      provider.addScope("profile");
+      provider.addScope("email");
+      await signInWithPopup(auth, provider);
+    };
+    ```
+  </Tab>
+
+  <Tab title="Password Reset">
+    ```typescript
+    const resetPassword = async (email: string) => {
+      if (!auth) throw new Error("Firebase Auth ยังไม่พร้อมใช้งาน");
+      await sendPasswordResetEmail(auth, email);
+    };
+    ```
+  </Tab>
+
+  <Tab title="Logout">
+    ```typescript
+    const logout = async () => {
+      if (!auth) return;
+      await signOut(auth);
+    };
+    ```
+  </Tab>
+</Tabs>
+
+### Using AuthContext
+
+```typescript
+import { useAuth } from "@/app/context/AuthContext";
+
+function MyComponent() {
+  const { user, schoolId, setupComplete, logout } = useAuth();
+
+  if (!user) return <p>Please login</p>;
+
+  return (
+    <div>
+      <p>School: {schoolId}</p>
+      <button onClick={logout}>Logout</button>
+    </div>
+  );
+}
+```
+
+---
+
+## ProtectedRoute Component
+
+The file `app/components/ProtectedRoute.tsx` is a route guard that handles 3 scenarios:
+
+1. **Not logged in** -- redirects to `/login`
+2. **Setup not complete** -- redirects to `/setup`
+3. **Setup complete but on /setup page** -- redirects to `/dashboard`
+
+### Logic Flow
+
+```typescript
+useEffect(() => {
+  if (loading || checkingSchool) return;
+
+  // Not logged in → go to login page
+  if (!user) {
+    router.push("/login");
+    return;
+  }
+
+  // Setup not complete → must go to setup first
+  if (!setupComplete && pathname !== "/setup") {
+    router.push("/setup");
+    return;
+  }
+
+  // Setup complete but still on setup page → go to dashboard
+  if (setupComplete && pathname === "/setup") {
+    router.push("/dashboard");
+    return;
+  }
+}, [user, loading, schoolId, setupComplete, checkingSchool, router, pathname]);
+```
+
+### Loading State
+
+While checking auth state, a spinner is displayed:
+
+```typescript
+if (loading || checkingSchool) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-3">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <p className="text-muted-foreground text-sm">กำลังโหลด...</p>
+    </div>
+  );
+}
+```
+
+### Using ProtectedRoute
+
+```typescript
+// In various page.tsx files
+import ProtectedRoute from "@/app/components/ProtectedRoute";
+
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      <div>Dashboard content...</div>
+    </ProtectedRoute>
+  );
+}
+```
+
+---
+
+## Auth State Diagram
+
+```
+┌──────────┐
+│  Start   │
+└────┬─────┘
+     │
+     ▼
+┌──────────────────┐
+│ onAuthStateChanged │
+└────────┬─────────┘
+         │
+    ┌────┴────┐
+    │ user?   │
+    └────┬────┘
+    No   │   Yes
+    │    │
+    ▼    ▼
+  /login  checkUserHasSchool()
+              │
+         ┌────┴────┐
+         │ result? │
+         └────┬────┘
+         No   │   Yes
+         │    │
+         ▼    ▼
+  createSchoolForNewUser()   setSchoolId + setSetupComplete
+         │
+         ▼
+  setupComplete?
+    │        │
+   No       Yes
+    │        │
+    ▼        ▼
+  /setup    /dashboard
+```
+
+---
+
+## New User Flow
+
+When a new user registers:
+
+<Steps>
+  <Step title="Create Firebase Auth account">
+    Via `createUserWithEmailAndPassword` or `signInWithPopup` (Google).
+  </Step>
+
+  <Step title="onAuthStateChanged triggers">
+    `AuthContext` detects that `currentUser` has a value.
+  </Step>
+
+  <Step title="Check school membership">
+    Calls `checkUserHasSchool(uid)` -- reads `userScheduler/{uid}`.
+  </Step>
+
+  <Step title="Automatically create school">
+    If no school exists -- calls `createSchoolForNewUser()`:
+    - Creates `{schoolId}/profile` with `setupComplete: false`
+    - Creates `userScheduler/{uid}` with `role: "OWNER"`
+    - Uses `writeBatch` to write both docs atomically
+  </Step>
+
+  <Step title="Redirect to Setup Wizard">
+    Since `setupComplete = false`, `ProtectedRoute` redirects to `/setup`.
+  </Step>
+</Steps>

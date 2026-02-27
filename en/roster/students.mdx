@@ -1,0 +1,168 @@
+---
+title: "Manage Student Groups / Classes"
+description: "Add, edit, delete, and reorder class sections and student groups, including grade level assignments"
+---
+
+The student management page is used to record **class sections** or **student groups** in your school, such as M.1/1 (ม.1/1), M.2/3 (ม.2/3), etc. It supports searching, sorting, importing from Excel, and adding custom fields.
+
+## Default Student/Class Fields
+
+Each entry includes the following default fields:
+
+| Field | Description | Required |
+|-------|------------|----------|
+| ID (รหัส) | A unique identifier for the class, e.g. `ST001` | No |
+| Class Name (ชื่อชั้น) | The name of the class section, e.g. `ม.1/1` (M.1/1), `ป.6/2` (P.6/2) | Yes |
+| Grade Level (ระดับชั้น) | The grade level group, selected from a dropdown | Yes |
+
+<Callout type="info">
+  These 3 default fields cannot be deleted, but you can add custom fields as needed.
+</Callout>
+
+## Grade Level Options
+
+The **Grade Level** field is a dropdown with the following defaults:
+
+- Secondary 1 (มัธยมศึกษาปีที่ 1 / ม.1)
+- Secondary 2 (มัธยมศึกษาปีที่ 2 / ม.2)
+- Secondary 3 (มัธยมศึกษาปีที่ 3 / ม.3)
+- Secondary 4 (มัธยมศึกษาปีที่ 4 / ม.4)
+- Secondary 5 (มัธยมศึกษาปีที่ 5 / ม.5)
+- Secondary 6 (มัธยมศึกษาปีที่ 6 / ม.6)
+
+You can customize the grade level options -- for example, adding Primary 1 through Primary 6 (ประถมศึกษาปีที่ 1-6) to match your school's structure.
+
+## Add a New Class
+
+<Steps>
+  <Step title="Open the add form">
+    Click the **+ Add** button at the top of the table.
+  </Step>
+  <Step title="Fill in the details">
+    Complete the form:
+
+    - **ID** -- class identifier (optional)
+    - **Class Name** -- e.g. ม.1/1 (M.1/1)
+    - **Grade Level** -- select from the dropdown
+    - If you have custom fields, additional input fields will appear in the form as well
+  </Step>
+  <Step title="Save">
+    Click **Save** to add the entry to the table.
+  </Step>
+</Steps>
+
+## Edit Data
+
+Click the pencil (edit) icon in the rightmost column of the row you want to edit. The same form used for adding data will open, pre-filled with the existing information for you to modify.
+
+## Delete Entries
+
+<Steps>
+  <Step title="Select entries">
+    Check the checkbox on the left side of each row you want to delete. You can select individual entries or check the table header checkbox to select all entries on the current page.
+  </Step>
+  <Step title="Confirm deletion">
+    Click the **Delete** button in the toolbar at the top. The system will ask for confirmation before deleting.
+  </Step>
+</Steps>
+
+<Callout type="warning">
+  When you select all entries on the current page, the system will also offer an option to **select all entries across all pages**. Deletions cannot be undone.
+</Callout>
+
+## Search and Filter
+
+Type your query in the **Search** box above the table. The system filters results in real-time across the following fields:
+
+- ID (รหัส)
+- Class Name (ชื่อชั้น)
+- Grade Level (ระดับชั้น)
+
+## Sorting
+
+You can sort data in 3 ways by clicking on a column header:
+
+| Sort Mode | Description |
+|-----------|------------|
+| Order (default) | Custom ordering that supports drag-and-drop |
+| ID | Sort by class ID |
+| Grade Level | Sort by grade level group |
+
+Click the same column header again to toggle between ascending (asc) and descending (desc) order.
+
+## Drag-and-Drop Reordering
+
+When sorting by **Order** (the default), you will see a six-dot grip icon in the order column.
+
+<Steps>
+  <Step title="Grab the drag handle">
+    Click and hold the six-dot grip icon on the left side of a row.
+  </Step>
+  <Step title="Drag to the new position">
+    Drag the row up or down to the desired position.
+  </Step>
+  <Step title="Drop">
+    Release the mouse button. The system will save the new order automatically.
+  </Step>
+</Steps>
+
+<Callout type="info">
+  The drag handle only appears when sorting by "Order." If you sort by ID or Grade Level, drag-and-drop reordering is not available.
+</Callout>
+
+## Custom Fields
+
+In addition to the default fields, you can create custom fields to store any additional information you need.
+
+<Steps>
+  <Step title="Open the field manager">
+    Click the **Manage Fields** button in the toolbar at the top.
+  </Step>
+  <Step title="Add a new field">
+    Choose the field type you need:
+
+    - **Text** (`text`) -- a free-text input
+    - **Number** (`number`) -- a numeric input
+    - **Select** (`select`) -- a dropdown with predefined options
+  </Step>
+  <Step title="Name and save">
+    Enter a name for the field. If the type is **Select**, define at least 1 option. Then click **Save**.
+  </Step>
+</Steps>
+
+<Callout type="warning">
+  Deleting a custom field will also remove its data from all class entries. The system will ask for confirmation before deleting.
+</Callout>
+
+## Import and Export Excel
+
+You can import data from Excel or export all data to an Excel file. For more details, see the [Import and Export Excel](/roster/excel) page.
+
+<Tabs>
+  <Tab title="Export Excel">
+    Click the **Export Excel** button. The system will download a file named `นักเรียน.xlsx` (Students) containing all class data, including custom fields.
+  </Tab>
+  <Tab title="Import Excel">
+    1. Click the **Import Excel** button and select an `.xlsx`, `.xls`, or `.csv` file
+    2. The system will show a preview of the data for you to review
+    3. Choose an import mode: **Append** or **Replace All**
+    4. Click **Confirm** to import
+  </Tab>
+  <Tab title="Download Template">
+    Click the **Download Template** button to get an empty Excel file with the correct column headers, including any custom fields you have configured.
+  </Tab>
+</Tabs>
+
+### Required Excel Columns
+
+| Column | Required |
+|--------|----------|
+| `รหัส` (ID) | Yes |
+| `ชื่อชั้น` (Class Name) | Yes |
+| `ระดับชั้น` (Grade Level) | Yes |
+
+Custom field columns will use the names you assigned when creating them.
+
+## Pagination
+
+The table displays data in pages. By default, 25 entries are shown per page. You can change the number of entries per page and navigate between pages using the controls at the bottom of the table.

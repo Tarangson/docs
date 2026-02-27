@@ -1,0 +1,302 @@
+---
+title: "ระบบ Authentication"
+description: "Firebase Auth setup, AuthContext, login/register flows และ route protection"
+---
+
+## ภาพรวม
+
+Tarangson ใช้ **Firebase Authentication** สำหรับจัดการ user identity รองรับ 2 วิธี:
+
+1. **Email/Password** -- สมัครสมาชิกและ login ด้วย email
+2. **Google OAuth** -- login ด้วยบัญชี Google (popup flow)
+
+เมื่อ user login สำเร็จ ระบบจะตรวจสอบว่า user มี school หรือยัง หากยังไม่มีจะสร้าง school document อัตโนมัติ
+
+---
+
+## Firebase Initialization
+
+ไฟล์ `app/lib/firebase.ts` จัดการ Firebase initialization:
+
+```typescript
+import { initializeApp, getApps, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
+
+// Only initialize if we have a valid API key
+if (firebaseConfig.apiKey) {
+  app = getApps().length === 0
+    ? initializeApp(firebaseConfig)
+    : getApps()[0];
+  auth = getAuth(app);
+  db = getFirestore(app, "tarangson"); // Named database
+  storage = getStorage(app);
+}
+
+export { app, auth, db, storage };
+```
+
+<Callout type="info">
+  ถ้าไม่มี API key (เช่น build-time หรือ SSR) ตัวแปร `auth`, `db`, `storage` จะเป็น `null` -- ทุก function ใน codebase ต้องเช็ค null ก่อนใช้งาน
+</Callout>
+
+---
+
+## AuthContext
+
+ไฟล์ `app/context/AuthContext.tsx` เป็น React Context ที่ wrap ทั้ง app:
+
+### Interface
+
+```typescript
+interface AuthContextType {
+  user: User | null;            // Firebase User object
+  loading: boolean;             // กำลังโหลด auth state
+  schoolId: string | null;      // School ID ที่ user สังกัด
+  setupComplete: boolean;       // โรงเรียน setup เสร็จแล้วหรือยัง
+  checkingSchool: boolean;      // กำลังตรวจสอบ school membership
+
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  logout: () => Promise<void>;
+  setSetupComplete: (v: boolean) => void;
+}
+```
+
+### Auth State Flow
+
+```
+onAuthStateChanged(auth, async (currentUser) => {
+  if (currentUser) {
+    // 1. ตรวจสอบว่า user มี school ไหม
+    let result = await checkUserHasSchool(currentUser.uid);
+
+    if (!result) {
+      // 2. User ใหม่ → สร้าง school document อัตโนมัติ
+      result = await createSchoolForNewUser(currentUser);
+    }
+
+    // 3. Set state
+    setSchoolId(result.schoolId);
+    setSetupComplete(result.setupComplete);
+  } else {
+    // Logged out
+    setSchoolId(null);
+    setSetupComplete(false);
+  }
+});
+```
+
+<Callout type="warning">
+  เมื่อ user สมัครใหม่ ระบบจะสร้าง school document อัตโนมัติผ่าน `createSchoolForNewUser()` โดยตั้ง `setupComplete: false` -- user ต้องผ่าน setup wizard ก่อนใช้งานได้
+</Callout>
+
+### Authentication Methods
+
+<Tabs>
+  <Tab title="Email/Password Login">
+    ```typescript
+    const loginWithEmail = async (email: string, password: string) => {
+      if (!auth) throw new Error("Firebase Auth ยังไม่พร้อมใช้งาน");
+      await signInWithEmailAndPassword(auth, email, password);
+    };
+    ```
+  </Tab>
+
+  <Tab title="Email/Password Register">
+    ```typescript
+    const registerWithEmail = async (email: string, password: string) => {
+      if (!auth) throw new Error("Firebase Auth ยังไม่พร้อมใช้งาน");
+      await createUserWithEmailAndPassword(auth, email, password);
+    };
+    ```
+  </Tab>
+
+  <Tab title="Google OAuth">
+    ```typescript
+    const loginWithGoogle = async () => {
+      if (!auth) throw new Error("Firebase Auth ยังไม่พร้อมใช้งาน");
+      const provider = new GoogleAuthProvider();
+      provider.addScope("profile");
+      provider.addScope("email");
+      await signInWithPopup(auth, provider);
+    };
+    ```
+  </Tab>
+
+  <Tab title="Password Reset">
+    ```typescript
+    const resetPassword = async (email: string) => {
+      if (!auth) throw new Error("Firebase Auth ยังไม่พร้อมใช้งาน");
+      await sendPasswordResetEmail(auth, email);
+    };
+    ```
+  </Tab>
+
+  <Tab title="Logout">
+    ```typescript
+    const logout = async () => {
+      if (!auth) return;
+      await signOut(auth);
+    };
+    ```
+  </Tab>
+</Tabs>
+
+### การใช้งาน AuthContext
+
+```typescript
+import { useAuth } from "@/app/context/AuthContext";
+
+function MyComponent() {
+  const { user, schoolId, setupComplete, logout } = useAuth();
+
+  if (!user) return <p>Please login</p>;
+
+  return (
+    <div>
+      <p>School: {schoolId}</p>
+      <button onClick={logout}>Logout</button>
+    </div>
+  );
+}
+```
+
+---
+
+## ProtectedRoute Component
+
+ไฟล์ `app/components/ProtectedRoute.tsx` เป็น route guard ที่ทำ 3 อย่าง:
+
+1. **ยังไม่ login** -- redirect ไป `/login`
+2. **ยัง setup ไม่เสร็จ** -- redirect ไป `/setup`
+3. **Setup เสร็จแล้วแต่อยู่หน้า /setup** -- redirect ไป `/dashboard`
+
+### Logic Flow
+
+```typescript
+useEffect(() => {
+  if (loading || checkingSchool) return;
+
+  // ไม่ได้ login → ไป login page
+  if (!user) {
+    router.push("/login");
+    return;
+  }
+
+  // Setup ยังไม่เสร็จ → ต้องไป setup ก่อน
+  if (!setupComplete && pathname !== "/setup") {
+    router.push("/setup");
+    return;
+  }
+
+  // Setup เสร็จแล้ว แต่ยังอยู่หน้า setup → ไป dashboard
+  if (setupComplete && pathname === "/setup") {
+    router.push("/dashboard");
+    return;
+  }
+}, [user, loading, schoolId, setupComplete, checkingSchool, router, pathname]);
+```
+
+### Loading State
+
+ขณะกำลังตรวจสอบ auth state จะแสดง spinner:
+
+```typescript
+if (loading || checkingSchool) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-3">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <p className="text-muted-foreground text-sm">กำลังโหลด...</p>
+    </div>
+  );
+}
+```
+
+### การใช้งาน ProtectedRoute
+
+```typescript
+// ในหน้า page.tsx ต่างๆ
+import ProtectedRoute from "@/app/components/ProtectedRoute";
+
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      <div>Dashboard content...</div>
+    </ProtectedRoute>
+  );
+}
+```
+
+---
+
+## Auth State Diagram
+
+```
+┌──────────┐
+│  Start   │
+└────┬─────┘
+     │
+     ▼
+┌──────────────────┐
+│ onAuthStateChanged │
+└────────┬─────────┘
+         │
+    ┌────┴────┐
+    │ user?   │
+    └────┬────┘
+    No   │   Yes
+    │    │
+    ▼    ▼
+  /login  checkUserHasSchool()
+              │
+         ┌────┴────┐
+         │ result? │
+         └────┬────┘
+         No   │   Yes
+         │    │
+         ▼    ▼
+  createSchoolForNewUser()   setSchoolId + setSetupComplete
+         │
+         ▼
+  setupComplete?
+    │        │
+   No       Yes
+    │        │
+    ▼        ▼
+  /setup    /dashboard
+```
+
+---
+
+## New User Flow
+
+เมื่อ user ลงทะเบียนใหม่:
+
+<Steps>
+  <Step title="สร้าง Firebase Auth account">
+    ผ่าน `createUserWithEmailAndPassword` หรือ `signInWithPopup` (Google)
+  </Step>
+
+  <Step title="onAuthStateChanged triggers">
+    `AuthContext` detect ว่า `currentUser` มีค่า
+  </Step>
+
+  <Step title="ตรวจสอบ school membership">
+    เรียก `checkUserHasSchool(uid)` -- อ่าน `userScheduler/{uid}`
+  </Step>
+
+  <Step title="สร้าง school อัตโนมัติ">
+    ถ้าไม่มี school -- เรียก `createSchoolForNewUser()`:
+    - สร้าง `{schoolId}/profile` ด้วย `setupComplete: false`
+    - สร้าง `userScheduler/{uid}` ด้วย `role: "OWNER"`
+    - ใช้ `writeBatch` เพื่อเขียนทั้ง 2 docs พร้อมกัน
+  </Step>
+
+  <Step title="Redirect ไป Setup Wizard">
+    เนื่องจาก `setupComplete = false` -- `ProtectedRoute` จะ redirect ไป `/setup`
+  </Step>
+</Steps>

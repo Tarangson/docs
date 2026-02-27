@@ -1,0 +1,278 @@
+---
+title: "การมีส่วนร่วมพัฒนา"
+description: "แนวทางการ contribute code, code style guide, PR process และ commit conventions"
+---
+
+## วิธีเริ่มต้น contribute
+
+<Steps>
+  <Step title="Fork & Clone">
+    ```bash
+    git clone https://github.com/your-org/tarangson-webapp.git
+    cd tarangson-webapp
+    npm install
+    ```
+  </Step>
+
+  <Step title="สร้าง branch">
+    ```bash
+    git checkout -b feature/your-feature-name
+    ```
+
+    ดู [Branch Naming Convention](#branch-naming) ด้านล่าง
+  </Step>
+
+  <Step title="พัฒนาและทดสอบ">
+    ```bash
+    npm run dev    # เปิด dev server
+    npm run lint   # ตรวจสอบ code
+    npm run build  # ทดสอบ build
+    ```
+  </Step>
+
+  <Step title="Commit และ Push">
+    ```bash
+    git add .
+    git commit -m "feat: เพิ่มฟีเจอร์ใหม่"
+    git push origin feature/your-feature-name
+    ```
+  </Step>
+
+  <Step title="สร้าง Pull Request">
+    เปิด PR ไปยัง `main` branch พร้อมอธิบายรายละเอียดการเปลี่ยนแปลง
+  </Step>
+</Steps>
+
+---
+
+## Code Style Guide
+
+### TypeScript
+
+- ใช้ **TypeScript** ตลอด -- ไม่ใช้ `.js` files
+- ใช้ **strict mode** (tsconfig)
+- กำหนด type ให้ชัดเจน -- หลีกเลี่ยง `any`
+- ใช้ `interface` สำหรับ object shapes และ `type` สำหรับ unions/intersections
+
+```typescript
+// ถูก
+interface Teacher {
+  id: string;
+  code: string;
+  firstName: string;
+}
+
+// ถูก
+type DayOfWeek = "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
+
+// หลีกเลี่ยง
+const data: any = {};
+```
+
+### React Patterns
+
+- ใช้ **`"use client"`** directive สำหรับ client components
+- ใช้ **functional components** ทั้งหมด (ไม่ใช้ class components)
+- ใช้ `memo()` สำหรับ components ที่ render บ่อย
+
+```typescript
+"use client";
+
+import { useState, useCallback, memo } from "react";
+
+const MyComponent = memo(function MyComponent({ data }: Props) {
+  const [state, setState] = useState<string>("");
+  // ...
+});
+```
+
+### State Management
+
+- ใช้ **React Context** สำหรับ global state (`AuthContext`)
+- ใช้ **`useState`** + **`useCallback`** + **`useMemo`** สำหรับ local state
+- ไม่ใช้ Redux, Zustand หรือ state management library ภายนอก
+
+### Styling
+
+- ใช้ **Tailwind CSS** เท่านั้น -- ไม่ใช้ CSS modules หรือ styled-components
+- ใช้ **`cn()`** utility (clsx + tailwind-merge) สำหรับ conditional classes
+- ใช้ **shadcn/ui** components เมื่อมี component ที่ต้องการ
+
+```typescript
+import { cn } from "@/lib/utils";
+
+<div className={cn(
+  "px-4 py-2 rounded-lg",
+  isActive && "bg-primary text-primary-foreground",
+  isDisabled && "opacity-50 cursor-not-allowed"
+)} />
+```
+
+### File Organization
+
+- **1 page = 1 file** ในโฟลเดอร์ `app/` ตาม Next.js App Router convention
+- **Shared utilities** อยู่ใน `app/lib/`
+- **UI components** (shadcn/ui) อยู่ใน `components/ui/`
+- **Custom components** อยู่ใน `app/components/`
+
+### Naming Conventions
+
+| ประเภท | Convention | ตัวอย่าง |
+|---|---|---|
+| Files (pages) | lowercase kebab-case (directory) | `app/timetable/page.tsx` |
+| Components | PascalCase | `ProtectedRoute`, `FileSelectDialog` |
+| Functions | camelCase | `loadTeachers`, `saveScheduleTimeslot` |
+| Types/Interfaces | PascalCase | `Teacher`, `ScheduleEntry` |
+| Constants | UPPER_SNAKE_CASE | `DEFAULT_ACADEMIC`, `DAY_LABELS` |
+| CSS classes | Tailwind utilities | `"flex items-center gap-2"` |
+
+---
+
+## Branch Naming {#branch-naming}
+
+```
+{type}/{short-description}
+```
+
+| Type | ใช้เมื่อ |
+|---|---|
+| `feature/` | เพิ่มฟีเจอร์ใหม่ |
+| `fix/` | แก้ bug |
+| `refactor/` | ปรับโครงสร้าง code |
+| `docs/` | อัพเดท documentation |
+| `chore/` | งาน maintenance (dependencies, config) |
+
+ตัวอย่าง:
+```
+feature/wizard-template-editor
+fix/conflict-detection-race-condition
+refactor/extract-schedule-utils
+```
+
+---
+
+## Commit Message Format
+
+ใช้ **Conventional Commits** format:
+
+```
+{type}: {description}
+```
+
+| Type | คำอธิบาย |
+|---|---|
+| `feat` | ฟีเจอร์ใหม่ |
+| `fix` | แก้ bug |
+| `refactor` | ปรับโครงสร้าง code |
+| `docs` | อัพเดท documentation |
+| `chore` | งาน maintenance |
+| `style` | แก้ formatting, ไม่กระทบ logic |
+
+ตัวอย่าง:
+```
+feat: เพิ่มปุ่ม card/print mode toggle ในหน้าแสดงตาราง
+fix: dropdown เปลี่ยนมุมมองใช้ไฟล์เดิม ไม่ต้องเลือกแฟ้มใหม่
+fix: card text สีดำทั้งหมด -- เอาสีน้ำเงินออกใน print mode
+```
+
+<Callout type="info">
+  Commit message เขียนเป็นภาษาไทยได้ -- ขอให้ขึ้นต้นด้วย type prefix เป็นภาษาอังกฤษ
+</Callout>
+
+---
+
+## Pull Request Process
+
+### PR Checklist
+
+- [ ] Code ผ่าน `npm run lint` โดยไม่มี error
+- [ ] Code ผ่าน `npm run build` สำเร็จ
+- [ ] อธิบายการเปลี่ยนแปลงใน PR description
+- [ ] Screenshot ถ้ามีการเปลี่ยน UI
+
+### PR Description Template
+
+```markdown
+## สิ่งที่เปลี่ยนแปลง
+- รายการที่ 1
+- รายการที่ 2
+
+## วิธีทดสอบ
+1. ขั้นตอนที่ 1
+2. ขั้นตอนที่ 2
+
+## Screenshots (ถ้ามี)
+```
+
+---
+
+## Key Files Reference
+
+เมื่อ contribute ควรทำความเข้าใจไฟล์หลักเหล่านี้:
+
+<Card title="app/lib/types.ts" href="/dev/types">
+  TypeScript types, interfaces, constants ทั้งหมด
+</Card>
+
+<Card title="app/lib/firestore.ts" href="/dev/firestore-functions">
+  Firestore utility functions ทุก domain
+</Card>
+
+<Card title="app/lib/excel.ts" href="/dev/excel">
+  Excel import/export functions
+</Card>
+
+<Card title="app/context/AuthContext.tsx" href="/dev/auth">
+  Authentication state management
+</Card>
+
+<Card title="app/timetable/page.tsx" href="/dev/timetable-engine">
+  Timetable editor -- ไฟล์ที่ใหญ่ที่สุดของ app
+</Card>
+
+---
+
+## Development Tips
+
+### Firestore Named Database
+
+App ใช้ named database `"tarangson"` ไม่ใช้ default:
+
+```typescript
+db = getFirestore(app, "tarangson");
+```
+
+ต้องสร้าง named database ใน Firebase Console ก่อนพัฒนา
+
+### Null Safety
+
+ตัวแปร Firebase (`auth`, `db`, `storage`) อาจเป็น `null` ถ้ายังไม่มี API key:
+
+```typescript
+// ทุกฟังก์ชันต้องเช็ค null
+if (!db) throw new Error("Firestore ยังไม่พร้อมใช้งาน");
+if (!db) return null;  // สำหรับ read functions
+if (!db) return [];    // สำหรับ list functions
+```
+
+### Batch Write Limit
+
+Firestore `writeBatch` รองรับสูงสุด **500 operations** ต่อ batch -- ต้อง chunk ถ้าเกิน:
+
+```typescript
+const CHUNK = 500;
+for (let i = 0; i < allRefs.length; i += CHUNK) {
+  const chunk = allRefs.slice(i, i + CHUNK);
+  const batch = writeBatch(db);
+  // ...
+  await batch.commit();
+}
+```
+
+### stripUndefined Helper
+
+Firestore ไม่รับ `undefined` values -- ใช้ `stripUndefined()` ก่อน write:
+
+```typescript
+await setDoc(ref, stripUndefined(data));
+```

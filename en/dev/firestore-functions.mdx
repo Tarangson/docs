@@ -1,0 +1,381 @@
+---
+title: "Firestore Utility Functions"
+description: "Detailed reference of all exported functions from firestore.ts, organized by domain"
+---
+
+The file `app/lib/firestore.ts` contains all Firestore utility functions in one place, organized by domain:
+
+---
+
+## School & User Management
+
+### `checkUserHasSchool(uid)`
+
+Checks which school a user belongs to. Reads from `userScheduler/{uid}` and checks `setupComplete` from the profile.
+
+```typescript
+async function checkUserHasSchool(
+  uid: string
+): Promise<SchoolCheckResult | null>
+```
+
+**Returns:** `{ schoolId, setupComplete }` or `null` if not found.
+
+### `createSchoolForNewUser(firebaseUser)`
+
+Creates a new school for a newly registered user. Uses `writeBatch` to write 2 documents:
+- `{schoolId}/profile` -- `setupComplete: false`, `ownerUid`
+- `userScheduler/{uid}` -- `role: "OWNER"`, `schoolId`
+
+```typescript
+async function createSchoolForNewUser(
+  firebaseUser: User
+): Promise<SchoolCheckResult>
+```
+
+### `loadSchoolDocument(schoolId)`
+
+Loads all 3 school sub-docs at once (profile, subscription, address).
+
+```typescript
+async function loadSchoolDocument(
+  schoolId: string
+): Promise<SchoolDocument | null>
+```
+
+### `loadUserScheduler(uid)`
+
+Loads member data from `userScheduler/{uid}`.
+
+```typescript
+async function loadUserScheduler(
+  uid: string
+): Promise<UserSchedulerData | null>
+```
+
+---
+
+## Subscription & Setup
+
+### `saveSubscription(schoolId, packageCode)`
+
+Saves the subscription (Step 1 of the setup wizard). Automatically sets a 30-day trial.
+
+```typescript
+async function saveSubscription(
+  schoolId: string,
+  packageCode: string  // "1" = small, "2" = large, "3" = AI
+): Promise<void>
+```
+
+### `uploadSchoolLogo(schoolId, file)`
+
+Uploads a logo to Firebase Storage at the path `schools/{schoolId}/logo.png`.
+
+```typescript
+async function uploadSchoolLogo(
+  schoolId: string,
+  file: File
+): Promise<string>  // download URL
+```
+
+### `saveSchoolProfile(schoolId, profile)`
+
+Saves the school profile (Step 2). Uses `{ merge: true }`.
+
+```typescript
+async function saveSchoolProfile(
+  schoolId: string,
+  profile: SchoolProfileData
+): Promise<void>
+```
+
+### `saveSchoolAddress(schoolId, addressData)`
+
+Saves the school address (Step 3).
+
+```typescript
+async function saveSchoolAddress(
+  schoolId: string,
+  addressData: SchoolAddressData
+): Promise<void>
+```
+
+### `saveContactAndComplete(schoolId, uid, memberUpdate, schoolContact)`
+
+Saves contact info and marks `setupComplete = true` (Step 4 -- final step). Uses `writeBatch` to write 2 docs:
+- profile -- adds contact + setupComplete = true
+- userScheduler/{uid} -- updates member info
+
+```typescript
+async function saveContactAndComplete(
+  schoolId: string,
+  uid: string,
+  memberUpdate: { fullName, position, email, phone },
+  schoolContact: SchoolContactData
+): Promise<void>
+```
+
+---
+
+## Academic Config
+
+### `initAcademicDefaults(schoolId)`
+
+Creates the academicDefaults document if it doesn't exist (uses `DEFAULT_ACADEMIC`).
+
+```typescript
+async function initAcademicDefaults(schoolId: string): Promise<void>
+```
+
+### `loadAcademicConfig(schoolId)`
+
+Loads the academic config (timezone, days, periodCount, periods).
+
+```typescript
+async function loadAcademicConfig(
+  schoolId: string
+): Promise<{ timezone, days, periodCount, periods, periodCall? } | null>
+```
+
+### `saveAcademicSettings(schoolId, settings)`
+
+Saves academic settings. Uses `{ merge: true }`.
+
+```typescript
+async function saveAcademicSettings(
+  schoolId: string,
+  settings: { timezone, days, periodCount, periods, periodCall? }
+): Promise<void>
+```
+
+---
+
+## Teacher CRUD
+
+| Function | Description |
+|---|---|
+| `loadTeachers(schoolId)` | Load all teachers (sorted by `order`) |
+| `saveTeacher(schoolId, teacher)` | Save/update a single teacher |
+| `deleteTeacher(schoolId, teacherId)` | Delete a single teacher |
+| `bulkSaveTeachers(schoolId, teachers)` | Save multiple teachers (Excel import) |
+| `bulkUpdateTeacherOrder(schoolId, orderMap)` | Update `order` field (drag-to-reorder) |
+| `deleteAllTeachers(schoolId)` | Delete all teachers (replace import mode) -- preserves `_settings` |
+| `bulkRemoveTeacherCustomField(schoolId, fieldId)` | Remove a custom field from all teachers |
+
+### Teacher Settings
+
+| Function | Description |
+|---|---|
+| `loadTeacherSettings(schoolId)` | Load `prefixOptions`, `deptOptions`, `customFieldDefs` |
+| `savePrefixOptions(schoolId, options)` | Save prefix options |
+| `saveDeptOptions(schoolId, options)` | Save department options |
+| `saveTeacherCustomFieldDefs(schoolId, fields)` | Save custom field definitions |
+
+---
+
+## Student CRUD
+
+| Function | Description |
+|---|---|
+| `loadStudents(schoolId)` | Load all students (sorted by `order`) |
+| `saveStudent(schoolId, student)` | Save/update a single student |
+| `deleteStudent(schoolId, studentId)` | Delete a single student |
+| `bulkSaveStudents(schoolId, students)` | Save multiple students |
+| `bulkUpdateStudentOrder(schoolId, orderMap)` | Update `order` field |
+| `deleteAllStudents(schoolId)` | Delete all students (preserves `_settings`) |
+| `bulkRemoveStudentCustomField(schoolId, fieldId)` | Remove a custom field from all students |
+
+### Student Settings
+
+| Function | Description |
+|---|---|
+| `loadStudentSettings(schoolId)` | Load `gradeGroupOptions`, `customFieldDefs` |
+| `saveGradeGroupOptions(schoolId, options)` | Save grade group options |
+| `saveStudentCustomFieldDefs(schoolId, fields)` | Save custom field definitions |
+
+---
+
+## Room CRUD
+
+| Function | Description |
+|---|---|
+| `loadRooms(schoolId)` | Load all rooms (sorted by `order`) |
+| `saveRoom(schoolId, room)` | Save/update a single room |
+| `deleteRoom(schoolId, roomId)` | Delete a single room |
+| `bulkSaveRooms(schoolId, rooms)` | Save multiple rooms |
+| `bulkUpdateRoomOrder(schoolId, orderMap)` | Update `order` field |
+| `deleteAllRooms(schoolId)` | Delete all rooms (preserves `_settings`) |
+| `bulkRemoveRoomCustomField(schoolId, fieldId)` | Remove a custom field from all rooms |
+
+### Room Settings
+
+| Function | Description |
+|---|---|
+| `loadRoomSettings(schoolId)` | Load `customFieldDefs` |
+| `saveRoomCustomFieldDefs(schoolId, fields)` | Save custom field definitions |
+
+---
+
+## Subject CRUD
+
+| Function | Description |
+|---|---|
+| `loadSubjects(schoolId)` | Load all subjects (sorted by `order`) |
+| `saveSubject(schoolId, subject)` | Save/update a single subject |
+| `deleteSubject(schoolId, subjectId)` | Delete a single subject |
+| `bulkSaveSubjects(schoolId, subjects)` | Save multiple subjects |
+| `bulkUpdateSubjectOrder(schoolId, orderMap)` | Update `order` field |
+| `deleteAllSubjects(schoolId)` | Delete all subjects (preserves `_settings`) |
+| `bulkRemoveSubjectCustomField(schoolId, fieldId)` | Remove a custom field from all subjects |
+
+### Subject Settings
+
+| Function | Description |
+|---|---|
+| `loadSubjectSettings(schoolId)` | Load `customFieldDefs` |
+| `saveSubjectCustomFieldDefs(schoolId, fields)` | Save custom field definitions |
+
+---
+
+## Generic Roster Functions
+
+Functions that work with subjects, rooms, and students by specifying the `entityType`:
+
+```typescript
+type EntityType = "subjects" | "rooms" | "students";
+```
+
+| Function | Description |
+|---|---|
+| `loadRosterEntities<T>(schoolId, entityType)` | Load all entities (generic) |
+| `saveRosterEntity<T>(schoolId, entityType, entity)` | Save a single entity |
+| `deleteRosterEntity(schoolId, entityType, entityId)` | Delete a single entity |
+| `bulkSaveRosterEntities<T>(schoolId, entityType, entities)` | Save multiple entities |
+| `saveCustomFieldDefs(schoolId, entityType, fields)` | Save custom field definitions |
+| `loadCustomFieldDefs(schoolId, entityType)` | Load custom field definitions |
+
+---
+
+## Timetable File CRUD
+
+| Function | Description |
+|---|---|
+| `createTimetableFile(schoolId, profile)` | Create a new timetable file, returns `fileId` |
+| `loadTimetableFile(schoolId, fileId)` | Load a file profile |
+| `listTimetableFiles(schoolId)` | List all files (newest first) |
+| `deleteTimetableFile(schoolId, fileId)` | Delete a file + roster sub-documents |
+
+### Roster Snapshot Functions
+
+When a timetable file is created, roster data is snapshotted into it:
+
+| Function | Description |
+|---|---|
+| `saveRosterSettings(schoolId, fileId, data)` | Save academic settings snapshot |
+| `saveRosterTeachers(schoolId, fileId, data)` | Save teachers snapshot |
+| `saveRosterStudents(schoolId, fileId, data)` | Save students snapshot |
+| `saveRosterRooms(schoolId, fileId, data)` | Save rooms snapshot |
+| `saveRosterSubjects(schoolId, fileId, data)` | Save subjects snapshot |
+| `loadRosterSettings(schoolId, fileId)` | Load academic settings snapshot |
+| `loadRosterTeachers(schoolId, fileId)` | Load teachers snapshot |
+| `loadRosterStudents(schoolId, fileId)` | Load students snapshot |
+| `loadRosterRooms(schoolId, fileId)` | Load rooms snapshot |
+| `loadRosterSubjects(schoolId, fileId)` | Load subjects snapshot |
+
+---
+
+## Schedule Timeslot CRUD
+
+### Standard Mode (3-collection atomic)
+
+<Callout type="info">
+  Standard mode writes/deletes across all 3 collections (teachers, students, rooms) simultaneously via `runTransaction` to prevent data inconsistency.
+</Callout>
+
+| Function | Description |
+|---|---|
+| `saveScheduleTimeslot(schoolId, fileId, entry)` | Save a timeslot -- checks for conflicts within the transaction |
+| `deleteScheduleTimeslot(schoolId, fileId, entry)` | Delete a timeslot from all 3 collections |
+| `moveScheduleTimeslot(schoolId, fileId, entry, newDay, newPeriod)` | Move a timeslot -- checks for conflicts at the destination |
+| `toggleTimeslotPin(schoolId, fileId, entry, pinValue)` | Toggle pin across all 3 collections |
+
+**Conflict detection:** `saveScheduleTimeslot` uses `runTransaction` to read all 3 docs first. If any exist, it throws:
+- `"CONFLICT_TEACHER"` -- the teacher already has a period scheduled
+- `"CONFLICT_STUDENT"` -- the student already has a period scheduled
+- `"CONFLICT_ROOM"` -- the room is already in use
+
+### Partial Mode (1-collection only)
+
+For advanced scheduling that writes to only 1 collection:
+
+| Function | Description |
+|---|---|
+| `saveScheduleTimeslotPartial(...)` | Save a timeslot in 1 collection |
+| `deleteScheduleTimeslotPartial(...)` | Delete a timeslot from 1 collection |
+| `moveScheduleTimeslotPartial(...)` | Move a timeslot within 1 collection |
+| `checkTimeslotConflictsBatch(...)` | Check conflicts for multiple entities at once |
+
+### Wizard Mode (atomic multi-entity)
+
+For wizard mode that schedules multiple entities at once:
+
+| Function | Description |
+|---|---|
+| `saveWizardTimeslotAtomic(...)` | Save a timeslot for all entities in 1 transaction |
+| `deleteWizardTimeslotAtomic(...)` | Delete a timeslot for all entities |
+| `deleteWizardTimeslotsBulkAtomic(...)` | Delete multiple slots -- chunks to <= 500 (Firestore limit) |
+
+### Schedule Settings
+
+| Function | Description |
+|---|---|
+| `saveScheduleSettings(schoolId, fileId, data)` | Save card field settings + hideOnOwnView |
+| `loadScheduleSettings(schoolId, fileId)` | Load schedule display settings |
+
+### Entity Timeslots
+
+| Function | Description |
+|---|---|
+| `loadEntityTimeslots(schoolId, fileId, entityType, entityId)` | Load all timeslots for a single entity |
+
+---
+
+## Wizard Templates
+
+| Function | Description |
+|---|---|
+| `loadWizardTemplates()` | Load wizard templates from `_settings/wizardTemplates` |
+| `saveWizardTemplates(templates)` | Save wizard templates |
+
+---
+
+## Internal Helper Functions
+
+Internal functions that are not exported but are important:
+
+### `stripUndefined(obj)`
+
+Removes keys with `undefined` values, since Firestore does not accept undefined.
+
+```typescript
+function stripUndefined(obj: object): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  );
+}
+```
+
+### Document Reference Helpers
+
+```typescript
+function userSchedulerRef(uid)        // userScheduler/{uid}
+function profileRef(schoolId)         // {schoolId}/profile
+function subscriptionRef(schoolId)    // {schoolId}/subscription
+function addressRef(schoolId)         // {schoolId}/address
+function academicRef(schoolId)        // {schoolId}/academicDefaults
+function teacherDocRef(schoolId, tid) // {schoolId}/academicDefaults/teachers/{tid}
+function fileDocRef(schoolId, fileId) // {schoolId}/timetable/files/{fileId}
+function rosterDocRef(schoolId, fileId, docType) // .../roster/{docType}
+function timeslotDocRef(schoolId, fileId, entityType, entityId, slotKey)
+```
