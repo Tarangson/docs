@@ -102,14 +102,17 @@
     "default": "light"
   },
   "fonts": {
-    "family": "Kanit",
     "heading": {
       "family": "Kanit",
-      "weight": 500
+      "weight": 500,
+      "source": "https://fonts.gstatic.com/s/kanit/v17/nKKU-Go6G5tXcr5mOBWzVaFrNlJzIu4.woff2",
+      "format": "woff2"
     },
     "body": {
       "family": "Kanit",
-      "weight": 300
+      "weight": 300,
+      "source": "https://fonts.gstatic.com/s/kanit/v17/nKKU-Go6G5tXcr4-ORWzVaFrNlJzIu4.woff2",
+      "format": "woff2"
     }
   }
 }
