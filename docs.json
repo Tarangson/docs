@@ -65,41 +65,6 @@
             ]
           }
         ]
-      },
-      {
-        "tab": "Developer Guide",
-        "hidden": true,
-        "groups": [
-          {
-            "group": "Architecture",
-            "pages": [
-              "dev/overview",
-              "dev/setup"
-            ]
-          },
-          {
-            "group": "Data Model",
-            "pages": [
-              "dev/firestore-schema",
-              "dev/types"
-            ]
-          },
-          {
-            "group": "Core Modules",
-            "pages": [
-              "dev/auth",
-              "dev/firestore-functions",
-              "dev/timetable-engine",
-              "dev/excel"
-            ]
-          },
-          {
-            "group": "Contributing",
-            "pages": [
-              "dev/contributing"
-            ]
-          }
-        ]
       }
     ]
   },
