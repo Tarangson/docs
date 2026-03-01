@@ -103,15 +103,15 @@
   },
   "fonts": {
     "heading": {
-      "family": "Kanit",
+      "family": "Chakra Petch",
       "weight": 500,
-      "source": "https://fonts.gstatic.com/s/kanit/v17/nKKU-Go6G5tXcr5mOBWzVaFrNlJzIu4.woff2",
+      "source": "https://fonts.gstatic.com/s/chakrapetch/v13/cIflMapbsEk7TDLdtEz1BwkebIl1U5_F_gUk0wzH.woff2",
       "format": "woff2"
     },
     "body": {
-      "family": "Kanit",
+      "family": "Chakra Petch",
       "weight": 300,
-      "source": "https://fonts.gstatic.com/s/kanit/v17/nKKU-Go6G5tXcr4-ORWzVaFrNlJzIu4.woff2",
+      "source": "https://fonts.gstatic.com/s/chakrapetch/v13/cIflMapbsEk7TDLdtEz1BwkeNIh1U5_F_gUk0wzH.woff2",
       "format": "woff2"
     }
   }
