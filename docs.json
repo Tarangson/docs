@@ -105,14 +105,14 @@
     "heading": {
       "family": "SaoChingcha",
       "weight": 700,
-      "source": "/fonts/SaoChingcha-Bold.otf",
-      "format": "opentype"
+      "source": "/fonts/SaoChingcha-Bold.woff2",
+      "format": "woff2"
     },
     "body": {
       "family": "SaoChingcha",
       "weight": 300,
-      "source": "/fonts/SaoChingcha-Light.otf",
-      "format": "opentype"
+      "source": "/fonts/SaoChingcha-Light.woff2",
+      "format": "woff2"
     }
   }
 }
