@@ -103,16 +103,16 @@
   },
   "fonts": {
     "heading": {
-      "family": "Chakra Petch",
-      "weight": 500,
-      "source": "https://fonts.gstatic.com/s/chakrapetch/v13/cIflMapbsEk7TDLdtEz1BwkebIl1U5_F_gUk0wzH.woff2",
-      "format": "woff2"
+      "family": "SaoChingcha",
+      "weight": 700,
+      "source": "/fonts/SaoChingcha-Bold.otf",
+      "format": "opentype"
     },
     "body": {
-      "family": "Chakra Petch",
+      "family": "SaoChingcha",
       "weight": 300,
-      "source": "https://fonts.gstatic.com/s/chakrapetch/v13/cIflMapbsEk7TDLdtEz1BwkeNIh1U5_F_gUk0wzH.woff2",
-      "format": "woff2"
+      "source": "/fonts/SaoChingcha-Light.otf",
+      "format": "opentype"
     }
   }
 }
