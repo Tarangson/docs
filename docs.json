@@ -36,6 +36,12 @@
             ]
           },
           {
+            "group": "แพ็กเกจ",
+            "pages": [
+              "pricing"
+            ]
+          },
+          {
             "group": "ตั้งค่าพื้นฐาน",
             "pages": [
               "settings/academic-defaults",
@@ -103,15 +109,15 @@
   },
   "fonts": {
     "heading": {
-      "family": "SaoChingcha",
-      "weight": 700,
-      "source": "/fonts/SaoChingcha-Bold.woff2",
+      "family": "Chakra Petch",
+      "weight": 500,
+      "source": "https://fonts.gstatic.com/s/chakrapetch/v13/cIflMapbsEk7TDLdtEz1BwkebIl1U5_F_gUk0wzH.woff2",
       "format": "woff2"
     },
     "body": {
-      "family": "SaoChingcha",
+      "family": "Chakra Petch",
       "weight": 300,
-      "source": "/fonts/SaoChingcha-Light.woff2",
+      "source": "https://fonts.gstatic.com/s/chakrapetch/v13/cIflMapbsEk7TDLdtEz1BwkeNIh1U5_F_gUk0wzH.woff2",
       "format": "woff2"
     }
   }
