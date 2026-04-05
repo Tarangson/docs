@@ -1,44 +1,60 @@
 ---
 title: "Tarangson — ระบบจัดตารางสอนอัจฉริยะ"
-description: "คู่มือการใช้งาน Tarangson ระบบจัดตารางสอนสำหรับโรงเรียน"
+description: "คู่มือการใช้งาน Tarangson โปรแกรมจัดตารางสอน AI สำหรับโรงเรียน — ครอบคลุมทุกฟีเจอร์ ทุกปุ่ม ทุกช่อง"
 ---
 
-Tarangson เป็นระบบจัดตารางสอนอัจฉริยะที่ช่วยให้โรงเรียนสร้างและจัดการตารางเรียนได้อย่างรวดเร็วและมีประสิทธิภาพ รองรับการตรวจจับความขัดแย้งของตารางแบบอัตโนมัติ การนำเข้า-ส่งออก Excel และการพิมพ์ตารางเรียน
+**Tarangson** (ตารางสอน) คือโปรแกรมจัดตารางสอนบนเว็บสำหรับโรงเรียน ช่วยให้งานที่ใช้เวลาหลายสัปดาห์เสร็จในไม่กี่นาที รองรับทั้งการลากวางเองและให้ AI จัดให้อัตโนมัติ พร้อมตรวจจับความขัดแย้ง (คาบชน ครูซ้ำ ห้องซ้ำ) แบบเรียลไทม์
 
-## เริ่มต้นใช้งาน
+<img src="/images/hero-light.png" alt="Tarangson" className="block dark:hidden" />
+<img src="/images/hero-dark.png" alt="Tarangson" className="hidden dark:block" />
 
-<Card
-  title="สมัครสมาชิกและเข้าสู่ระบบ"
-  icon="user-plus"
-  href="/getting-started/register"
-  horizontal
->
-  สร้างบัญชีผู้ใช้และเข้าสู่ระบบ Tarangson
-</Card>
+## คู่มือนี้เหมาะกับใคร
 
-<Card
-  title="ตั้งค่าโรงเรียน"
-  icon="school"
-  href="/getting-started/setup-wizard"
-  horizontal
->
-  ตั้งค่าข้อมูลโรงเรียนผ่าน Setup Wizard
-</Card>
+คู่มือชุดนี้จัดทำขึ้นสำหรับ **ผู้ใช้จริง** — ผู้ดูแลวิชาการ หัวหน้ากลุ่มสาระ หรือครูที่รับผิดชอบการจัดตาราง โดยอธิบายทุกหน้าจอและทุกปุ่มในแอปอย่างละเอียด เพื่อให้เปิดใช้งานได้ทันทีโดยไม่ต้องลองผิดลองถูก
 
-## คุณสมบัติหลัก
+## เริ่มต้นใช้งานใน 5 ขั้นตอน
+
+<Steps>
+  <Step title="สมัครสมาชิก">
+    สร้างบัญชีและเข้าสู่ระบบที่ [app.tarangson.com](https://app.tarangson.com) — ดูรายละเอียดที่ [สมัครสมาชิก](/getting-started/register)
+  </Step>
+  <Step title="ตั้งค่าข้อมูลโรงเรียน">
+    กรอกชื่อโรงเรียน ที่อยู่ ผู้ติดต่อ และเพิ่มผู้ใช้ร่วม — ดูที่ [ข้อมูลโรงเรียน](/settings/school-profile)
+  </Step>
+  <Step title="ตั้งค่าตารางเรียนพื้นฐาน">
+    กำหนดวันที่สอน จำนวนคาบ ความยาวคาบ — ดูที่ [ตารางเรียนพื้นฐาน](/settings/academic-defaults)
+  </Step>
+  <Step title="เพิ่มข้อมูลผู้สอน/ผู้เรียน/ห้อง/วิชา">
+    อย่างน้อยต้องมีข้อมูล 4 กลุ่มนี้ก่อนจึงสร้างแฟ้มตารางสอนได้ — ดูที่ [จัดการข้อมูล](/roster/teachers)
+  </Step>
+  <Step title="สร้างแฟ้มจัดตารางสอน">
+    เลือกใช้ AI จัดให้ หรือลากวางเอง — ดูที่ [สร้างตารางสอน](/timetable/create-file)
+  </Step>
+</Steps>
+
+## แผนผังคู่มือ
 
 <Columns cols={2}>
-  <Card title="จัดการข้อมูล" icon="database" href="/roster/teachers">
-    เพิ่มข้อมูลครู นักเรียน ห้องเรียน และวิชา พร้อมรองรับ Import/Export จาก Excel
+  <Card title="เริ่มต้นใช้งาน" icon="rocket" href="/getting-started/register">
+    สมัครสมาชิก เข้าสู่ระบบ รู้จักหน้า Dashboard และ checklist ก่อนสร้างแฟ้ม
   </Card>
-  <Card title="สร้างตารางสอน" icon="calendar-plus" href="/timetable/create-file">
-    สร้างตารางสอนด้วย Wizard หรือลาก-วางแบบอิสระ พร้อมตรวจจับความขัดแย้งอัตโนมัติ
+  <Card title="ตั้งค่าเริ่มต้น" icon="gear" href="/settings/school-profile">
+    โปรไฟล์ของฉัน · ข้อมูลโรงเรียน · ที่อยู่ · ผู้ติดต่อ · แพ็กเกจ · การชำระเงิน · จัดการผู้ใช้
   </Card>
-  <Card title="ดูตารางสอน" icon="eye" href="/timetable/viewing">
-    ดูตารางสอนแยกตามครู นักเรียน หรือห้องเรียน รองรับ Card และ Table mode
+  <Card title="ข้อมูลพื้นฐาน" icon="database" href="/roster/teachers">
+    ผู้สอน · ผู้เรียน · ห้องเรียน · รายวิชา · นำเข้า/ส่งออก Excel
   </Card>
-  <Card title="พิมพ์ตาราง" icon="print" href="/timetable/printing">
-    พิมพ์ตารางสอนแยกรายบุคคลหรือทั้งหมดในรูปแบบที่พร้อมใช้งาน
+  <Card title="จัดตารางสอน" icon="calendar-plus" href="/timetable/files">
+    แฟ้มตารางสอน · สร้างใหม่ · AI จัดอัตโนมัติ · ลากวางเอง · ดูตาราง · พิมพ์ลงกระดาษ
+  </Card>
+  <Card title="แพ็กเกจและราคา" icon="tag" href="/pricing">
+    Free · Academic Pro · เปรียบเทียบฟีเจอร์และราคา
+  </Card>
+  <Card title="English" icon="globe" href="/en">
+    English version of this guide
   </Card>
 </Columns>
 
+## ติดต่อฝ่ายสนับสนุน
+
+พบปัญหาการใช้งานหรือต้องการคำแนะนำเพิ่มเติม ติดต่อได้ที่ [support@tarangson.com](mailto:support@tarangson.com)
