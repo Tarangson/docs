@@ -9,8 +9,7 @@
   },
   "favicon": "/favicon.svg",
   "languages": [
-    { "language": "th", "default": true },
-    { "language": "en", "prefix": "en" }
+    { "language": "th", "default": true }
   ],
   "navigation": {
     "global": {
