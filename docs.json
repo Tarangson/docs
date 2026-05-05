@@ -63,6 +63,7 @@
             "pages": [
               "timetable/create-file",
               "timetable/wizard",
+              "timetable/ai-scheduler",
               "timetable/editing",
               "timetable/viewing",
               "timetable/printing",
